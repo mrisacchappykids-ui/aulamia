@@ -1,0 +1,73 @@
+[
+  {
+    "id": "aula-5to-matematicas",
+    "name": "5° Primaria - Matemáticas Inclusiva",
+    "grade": "5° de Primaria",
+    "subject": "Matemáticas",
+    "student_count": 25,
+    "average_age": 10,
+    "session_duration_minutes": 50,
+    "methodology": "Aprendizaje Basado en Problemas y Manipulativo",
+    "available_resources": [
+      "Proyector interactivo",
+      "1 computador docente",
+      "Material concreto (bloques lógicos, fichas)",
+      "Cuadernos de trabajo"
+    ],
+    "general_learning_pace": "Grupo heterogéneo con excelente disposición al trabajo en parejas",
+    "inclusion_support_needs": [
+      "Instrucciones breves y segmentadas por pasos",
+      "Apoyo visual reforzado (gráficos e infografías)",
+      "Menor densidad de ejercicios por hoja",
+      "Tiempo flexible para procesar cálculos"
+    ],
+    "notes": "Tres estudiantes requieren andamiaje visual paso a paso; dos estudiantes tienen ritmo de avance rápido.",
+    "created_at": "2026-09-14T18:37:26.205966"
+  },
+  {
+    "id": "aula-8vo-ciencias",
+    "name": "8° Secundaria - Ciencias Naturales",
+    "grade": "8° de Secundaria",
+    "subject": "Ciencias Naturales y Educación Ambiental",
+    "student_count": 32,
+    "average_age": 13,
+    "session_duration_minutes": 60,
+    "methodology": "Aprendizaje Basado en la Indagación y Trabajo Colaborativo",
+    "available_resources": [
+      "Tablero acrílico",
+      "Materiales reciclables de laboratorio escolar",
+      "Conexión a internet intermitente"
+    ],
+    "general_learning_pace": "Ritmo medio, alta energía y preferencia por debates y casos reales",
+    "inclusion_support_needs": [
+      "Estructuración explícita de roles en trabajo en equipo",
+      "Glosario previo de conceptos científicos",
+      "Alternativas orales y gráficas para entregables"
+    ],
+    "notes": "Énfasis en vincular la temática con el entorno local del estudiante.",
+    "created_at": "2026-09-14T18:37:26.206001"
+  },
+  {
+    "id": "aula-3ro-lengua",
+    "name": "3° Primaria - Lenguaje y Comunicación",
+    "grade": "3° de Primaria",
+    "subject": "Lengua Castellana",
+    "student_count": 22,
+    "average_age": 8,
+    "session_duration_minutes": 45,
+    "methodology": "Taller de Lectoescritura Creativa y Gamificación",
+    "available_resources": [
+      "Biblioteca de aula",
+      "Láminas ilustradas",
+      "Parlante de audio para narraciones"
+    ],
+    "general_learning_pace": "Desarrollo progresivo de la fluidez lectora",
+    "inclusion_support_needs": [
+      "Uso de pictogramas y organizadores gráficos",
+      "Lectura guiada en voz alta con pausas activas",
+      "Consignas con modelado previo del docente"
+    ],
+    "notes": "Atención especial a la comprensión lectora literal e inferencial.",
+    "created_at": "2026-09-14T18:37:26.206005"
+  }
+]

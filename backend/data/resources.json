@@ -1,0 +1,62 @@
+[
+  {
+    "id": "plan-a62ebfe4",
+    "classroom_id": "aula-5to-matematicas",
+    "topic": "Suma y resta de fracciones",
+    "title": "Secuencia Didáctica: Suma y resta de fracciones en el contexto de 5° de Primaria",
+    "grade": "5° de Primaria",
+    "subject": "Matemáticas",
+    "learning_objective": "Resolver problemas aditivos con fracciones",
+    "competencies": [
+      "Comprensión conceptual y aplicación práctica de Suma y resta de fracciones",
+      "Comunicación asertiva de ideas y razonamiento pedagógico",
+      "Resolución colaborativa de desafíos en el aula"
+    ],
+    "phases": [
+      {
+        "phase_name": "Inicio / Enganche y Activación de Saberes",
+        "duration_minutes": 10,
+        "teacher_action": "El docente presenta un detonante cotidiano sobre 'Suma y resta de fracciones' mediante Proyector interactivo. Explica el propósito en lenguaje claro y modela visualmente el concepto clave.",
+        "student_action": "Los estudiantes participan respondiendo preguntas cortas, comparten experiencias previas en parejas y activan organizadores gráficos rápidos en sus cuadernos.",
+        "required_materials": [
+          "Proyector interactivo",
+          "Guía visual introductoria"
+        ]
+      },
+      {
+        "phase_name": "Desarrollo / Exploración Guiada y Práctica Multinivel",
+        "duration_minutes": 30,
+        "teacher_action": "Implementa la metodología 'Aprendizaje Basado en Problemas y Manipulativo'. Dosifica la instrucción en 2 momentos breves. Circula por el aula ofreciendo andamiaje diferenciado (apoyos específicos: Instrucciones breves y segmentadas por pasos, Apoyo visual reforzado (gráficos e infografías)).",
+        "student_action": "Trabajan en equipos heterogéneos resolviendo situaciones prácticas sobre 'Suma y resta de fracciones'. Utilizan Cuadernos de trabajo para experimentar y contrastar soluciones.",
+        "required_materials": [
+          "Proyector interactivo",
+          "1 computador docente",
+          "Material concreto (bloques lógicos, fichas)"
+        ]
+      },
+      {
+        "phase_name": "Cierre / Metacognición y Síntesis Inclusiva",
+        "duration_minutes": 10,
+        "teacher_action": "Facilita una ronda de síntesis con semáforo de autoevaluación o ticket de salida con apoyos gráficos. Refuerza positivamente los logros observados.",
+        "student_action": "Cada estudiante completa un ticket de salida (opción escrita, gráfica o verbal) respondiendo: ¿Qué descubrí hoy sobre este tema y qué duda aún tengo?",
+        "required_materials": [
+          "Ticket de salida / organizador de síntesis"
+        ]
+      }
+    ],
+    "universal_design_adaptations": [
+      "Principio DUA (Múltiples formas de representación): Instrucciones breves y segmentadas por pasos.",
+      "Principio DUA (Múltiples formas de acción y expresión): Permitir entregables orales, esquemáticos o escritos según la preferencia del estudiante.",
+      "Ajuste razonable de tiempo: Segmentación del desarrollo en bloques de 15 minutos con comprobación de comprensión intermedia.",
+      "Acompañamiento entre pares: Asignación de parejas de apoyo colaborativo sin sobrecargar a ningún estudiante."
+    ],
+    "formative_evaluation_strategy": "Observación formativa con lista de cotejo cualitativa durante la fase de desarrollo y ticket de salida de metacognición.",
+    "learning_evidences": [
+      "Ficha o producto de trabajo sobre Suma y resta de fracciones completado en equipo o individualmente.",
+      "Registro de participación y autoevaluación en el ticket de salida."
+    ],
+    "created_at": "2026-09-14T18:43:17.556581",
+    "resource_type": "lesson_plan",
+    "saved_at": "2026-09-14T18:43:17.556982"
+  }
+]
