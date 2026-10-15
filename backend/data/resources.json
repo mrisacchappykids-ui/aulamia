@@ -1,5 +1,409 @@
 [
   {
+    "id": "eval-56305489",
+    "classroom_id": "aula-5to-matematicas",
+    "topic": "Resolución de problemas con suma y resta de fracciones",
+    "title": "Evaluación Formativa y Rúbrica Contextual: Resolución de problemas con suma y resta de fracciones",
+    "evaluation_type": "formativa",
+    "questions": [
+      {
+        "id": 1,
+        "question_text": "En el contexto de Resolución de problemas con suma y resta de fracciones, ¿cuál de las siguientes afirmaciones describe mejor su propósito o funcionamiento principal?",
+        "question_type": "multiple_choice",
+        "options": [
+          "Permite estructurar y resolver situaciones problemáticas paso a paso con evidencia clara.",
+          "Es un procedimiento memorístico que se aplica únicamente de forma aislada sin relación con el entorno.",
+          "Corresponde solo a un concepto teórico sin aplicación demostrable en {classroom.grade}.",
+          "Es un requisito formal que no influye en la comprensión del área de {classroom.subject}."
+        ],
+        "correct_option_index": 0,
+        "explanation_and_feedback": "Excelente: comprender el sentido práctico de Resolución de problemas con suma y resta de fracciones es clave para su apropiación pedagógica.",
+        "inclusion_hint": "Pista visual: Recuerda el ejemplo cotidiano que revisamos con Proyector interactivo."
+      },
+      {
+        "id": 2,
+        "question_text": "Si un grupo de estudiantes en 5° de Primaria se enfrenta a un desafío práctico sobre Resolución de problemas con suma y resta de fracciones, ¿cuál sería el primer paso metodológico recomendado?",
+        "question_type": "multiple_choice",
+        "options": [
+          "Comenzar a escribir sin leer las condiciones del problema.",
+          "Identificar qué datos o elementos se conocen y qué objetivo se necesita alcanzar.",
+          "Esperar a que otro equipo complete todo el trabajo.",
+          "Cambiar de tema inmediatamente."
+        ],
+        "correct_option_index": 1,
+        "explanation_and_feedback": "La comprensión inicial del problema es fundamental antes de ejecutar cualquier cálculo o procedimiento.",
+        "inclusion_hint": "Pista: Primero leemos y subrayamos los datos que tenemos disponibles."
+      },
+      {
+        "id": 3,
+        "question_text": "Explica con tus propias palabras o mediante un dibujo cómo le explicarías a un compañero de clase qué es Resolución de problemas con suma y resta de fracciones y para qué sirve.",
+        "question_type": "open_reflection",
+        "options": null,
+        "correct_option_index": null,
+        "explanation_and_feedback": "Esta pregunta valora la apropiación reflexiva y permite expresión escrita, oral o esquemática.",
+        "inclusion_hint": "Puedes usar un esquema de tres partes: '¿Qué es?', '¿Un ejemplo?', '¿Por qué importa?'."
+      },
+      {
+        "id": 4,
+        "question_text": "Ante una dificultad al trabajar con Resolución de problemas con suma y resta de fracciones, ¿qué estrategia de autorregulación resulta más efectiva?",
+        "question_type": "multiple_choice",
+        "options": [
+          "Desistir y no entregar nada.",
+          "Consultar la guía de apoyo visual, releer el paso anterior o pedir clarificación a un par o al docente.",
+          "Borrar todo y empezar desde cero sin reflexionar sobre el error.",
+          "Adivinar la respuesta final."
+        ],
+        "correct_option_index": 1,
+        "explanation_and_feedback": "El error pedagógico es una oportunidad de aprendizaje cuando se utilizan apoyos y mediación.",
+        "inclusion_hint": "Pista: Apóyate en las tarjetas de andamiaje disponibles en el aula."
+      }
+    ],
+    "rubric": [
+      {
+        "criteria_name": "Comprensión conceptual de Resolución de problemas con suma y resta de fracciones",
+        "level_emerging": "Reconoce términos aislados con apoyo docente constante y modelado.",
+        "level_developing": "Identifica los elementos clave de la temática con asistencia ocasional.",
+        "level_proficient": "Aplica los conceptos centrales con autonomía y precisión en situaciones estándar.",
+        "level_advanced": "Transfiere el concepto a situaciones nuevas y propone soluciones creativas."
+      },
+      {
+        "criteria_name": "Uso de estrategias y recursos de aprendizaje",
+        "level_emerging": "Requiere mediación directa para utilizar los recursos y apoyos visuales disponibles.",
+        "level_developing": "Utiliza los apoyos visuales o manipulativos cuando se le recuerda.",
+        "level_proficient": "Selecciona y emplea eficientemente los recursos del aula para resolver el reto.",
+        "level_advanced": "Optimiza el uso de recursos y colabora orientando a sus compañeros."
+      },
+      {
+        "criteria_name": "Comunicación y justificación del resultado",
+        "level_emerging": "Comunica ideas breves con asistencia de preguntas orientadoras.",
+        "level_developing": "Describe el procedimiento seguido de manera sencilla.",
+        "level_proficient": "Justifica con claridad sus conclusiones utilizando vocabulario acorde al grado.",
+        "level_advanced": "Argumenta sólidamente su proceso y reflexiona sobre sus propios aprendizajes."
+      }
+    ],
+    "adaptation_guidelines": [
+      "Flexibilidad de formato: Permitir respuesta oral, señalización o apoyo gráfico a estudiantes que lo requieran.",
+      "Segmentación de la evaluación: Posibilidad de aplicar las preguntas en 2 bloques con breve receso intermedio.",
+      "Lectura guiada: Lectura en voz alta de las consignas por parte del docente o facilitador.",
+      "Valoración positiva del esfuerzo y retroalimentación formativa inmediata no punitiva."
+    ],
+    "created_at": "2026-10-05T16:39:03.344772",
+    "resource_type": "evaluation",
+    "saved_at": "2026-10-05T16:39:03.355937"
+  },
+  {
+    "id": "mat-e5dbbfdd",
+    "classroom_id": "aula-5to-matematicas",
+    "topic": "Fracciones en la vida cotidiana: Reparto equitativo",
+    "title": "Ficha de Aprendizaje Activo: Fracciones en la vida cotidiana: Reparto equitativo",
+    "material_type": "ficha_de_trabajo",
+    "grade": "5° de Primaria",
+    "subject": "Matemáticas",
+    "header_fields": {
+      "Estudiante": "________________________________________",
+      "Fecha": "____ / ____ / ________",
+      "Grado": "5° de Primaria",
+      "Asignatura": "Matemáticas"
+    },
+    "introductory_concept": "Hoy aprenderemos sobre 'Fracciones en la vida cotidiana: Reparto equitativo'. El objetivo no es memorizar, sino comprender cómo funciona y aplicar soluciones creativas utilizando los recursos a nuestro alcance.",
+    "sections": [
+      {
+        "section_number": 1,
+        "title": "Paso 1: ¿Qué vamos a explorar hoy? (Activación de saberes)",
+        "instructions": "Observa atentamente el esquema gráfico y responde brevemente con tus propias palabras o un dibujo.",
+        "exercises_or_activities": [
+          "Escribe o dibuja 1 ejemplo de tu vida cotidiana donde hayas observado o usado Fracciones en la vida cotidiana: Reparto equitativo.",
+          "Comenta en voz baja con tu compañero/a de al lado qué idea tienen en común."
+        ],
+        "visual_clue_or_scaffolding": "💡 Pista de apoyo (Instrucciones breves y segmentadas por pasos): Recuerda lo aprendido en la sesión introductoria."
+      },
+      {
+        "section_number": 2,
+        "title": "Paso 2: Manos a la obra (Práctica guiada en equipo o individual)",
+        "instructions": "Resuelve los siguientes 3 desafíos aplicando la metodología Aprendizaje Basado en Problemas y Manipulativo.",
+        "exercises_or_activities": [
+          "Ejercicio A (Nivel Base): Identifica y señala los 2 elementos principales de Fracciones en la vida cotidiana: Reparto equitativo.",
+          "Ejercicio B (Aplicación): Utiliza los recursos del aula (Cuadernos de trabajo) para representar la solución paso a paso.",
+          "Ejercicio C (Comprobación): Explica brevemente por qué tu resultado tiene sentido lógico."
+        ],
+        "visual_clue_or_scaffolding": "🔍 Recuerda: Puedes consultar las tarjetas de apoyo visual y trabajar en parejas cooperativas."
+      },
+      {
+        "section_number": 3,
+        "title": "Paso 3: Reto de Profundización / Aplicación Creativa",
+        "instructions": "Imagina que debes enseñarle este concepto a un estudiante de un grado menor. ¿Cómo se lo explicarías?",
+        "exercises_or_activities": [
+          "Diseña una mini-regla mnemotécnica o un esquema visual en 3 pasos que resuma el aprendizaje de hoy."
+        ],
+        "visual_clue_or_scaffolding": "✨ Si prefieres, puedes grabar una nota de voz o realizar una demostración práctica para el docente."
+      }
+    ],
+    "metacognitive_exit_ticket": "Ticket de Salida (Autoevaluación DUA): Marca con una cara cómo te sentiste hoy: 🟢 Lo entendí y puedo explicarlo | 🟡 Lo entendí pero tengo una duda | 🔴 Necesito un poco más de práctica guiada. ¿Qué fue lo más interesante que aprendiste hoy?",
+    "teacher_implementation_tip": "Orientación para el docente en 5° de Primaria: Esta ficha cuenta con andamiaje visual y menor densidad textual. Se recomienda dar 10 minutos para el Paso 1, 20 minutos para el Paso 2 con andamiaje activo, y 10 minutos finales para el ticket de salida.",
+    "created_at": "2026-10-05T16:38:49.670430",
+    "resource_type": "material",
+    "saved_at": "2026-10-05T16:38:49.686767"
+  },
+  {
+    "id": "game-a1a78cc8",
+    "classroom_id": "aula-5to-matematicas",
+    "topic": "Operaciones y equivalencia de fracciones",
+    "game_title": "Misión Interactiva: El Reto de Operaciones y equivalencia de fracciones",
+    "game_style": "trivia_interactiva",
+    "instructions": "Juego pedagógico adaptado para 5° de Primaria. Responde cada desafío, acumula puntos para tu equipo y desbloquea la insignia de maestría en Operaciones y equivalencia de fracciones.",
+    "items": [
+      {
+        "id": 1,
+        "prompt": "🌟 Pregunta 1: Para iniciar nuestro viaje por Operaciones y equivalencia de fracciones, ¿cuál es la idea principal que debemos recordar?",
+        "options": [
+          "Comprender el concepto y relacionarlo con nuestro día a día.",
+          "Memorizar una fórmula sin entender para qué sirve.",
+          "Resolver todo a máxima velocidad sin revisar.",
+          "Hacerlo individualmente sin compartir ideas."
+        ],
+        "correct_index": 0,
+        "points": 100,
+        "fun_fact_or_feedback": "¡Increíble! Relacionar Operaciones y equivalencia de fracciones con tu entorno te ayuda a comprenderlo para siempre.",
+        "visual_clue": "💡 Pista: Pensar en cómo lo usamos en la vida diaria."
+      },
+      {
+        "id": 2,
+        "prompt": "⚡ Desafío 2: En Matemáticas, cuando resolvemos una situación de Operaciones y equivalencia de fracciones, ¿qué herramienta o recurso nos ayuda a verificar el resultado?",
+        "options": [
+          "Cerrar los ojos e imaginarlo al azar.",
+          "Utilizar Cuadernos de trabajo para comprobar.",
+          "Preguntar solo si está bien sin comprobar.",
+          "Borrar todo rápidamente."
+        ],
+        "correct_index": 1,
+        "points": 150,
+        "fun_fact_or_feedback": "¡Muy bien jugado! Comprobar con dibujos o materiales concretos refuerza tu seguridad.",
+        "visual_clue": "🔍 Pista: Recuerda los apoyos que tenemos en el salón."
+      },
+      {
+        "id": 3,
+        "prompt": "🚀 Misión 3: Si un compañero de equipo tiene dudas con este tema, ¿cuál es la mejor actitud colaborativa?",
+        "options": [
+          "Hacer su parte para terminar antes.",
+          "Explicarle con un ejemplo sencillo y con paciencia.",
+          "Decirle que no es importante.",
+          "Ignorar su pregunta."
+        ],
+        "correct_index": 1,
+        "points": 200,
+        "fun_fact_or_feedback": "¡Espíritu de equipo total! Enseñar a otros es una de las mejores formas de aprender.",
+        "visual_clue": "🤝 Pista: Compartir saberes enriquece al grupo."
+      },
+      {
+        "id": 4,
+        "prompt": "🏆 Gran Final: ¿Cuál de estas afirmaciones sobre Operaciones y equivalencia de fracciones es una verdad pedagógica?",
+        "options": [
+          "El error no existe, si te equivocas ya no puedes aprender.",
+          "Equivocarse y revisar el error es parte del camino para aprender mejor.",
+          "Solo las personas que terminan de primero son inteligentes.",
+          "Aprender este tema solo sirve para el examen de mañana."
+        ],
+        "correct_index": 1,
+        "points": 250,
+        "fun_fact_or_feedback": "¡Respuesta de campeonato! Los científicos y pensadores aprenden cada día de sus ensayos y revisiones.",
+        "visual_clue": "✨ Pista: El aprendizaje es un proceso continuo."
+      }
+    ],
+    "reward_badge_name": "Insignia Maestro/a de Operaciones y equivalencia de fracciones",
+    "inclusion_accommodations": [
+      "Sin temporizador estresante: el estudiante puede tomarse el tiempo necesario.",
+      "Pista visual disponible en cada pregunta para andamiaje cognitivo.",
+      "Retroalimentación positiva en cada intento sin penalizaciones frustrantes.",
+      "Letra clara y alto contraste de color."
+    ],
+    "created_at": "2026-10-05T16:38:16.728198",
+    "resource_type": "game",
+    "saved_at": "2026-10-05T16:38:16.729174"
+  },
+  {
+    "id": "act-870203db",
+    "classroom_id": "aula-5to-matematicas",
+    "topic": "Fracciones equivalentes y representación gráfica",
+    "title": "Set de Actividades Diferenciadas: Fracciones equivalentes y representación gráfica",
+    "estimated_time_minutes": 50,
+    "base_activity": {
+      "level": "base",
+      "title": "Desafío Central: Exploradores de Fracciones equivalentes y representación gráfica",
+      "description": "Actividad diseñada para el estándar de 5° de Primaria. Permite a los 25 estudiantes interactuar con el concepto central de manera colaborativa.",
+      "step_by_step_instructions": [
+        "1. Analizar el caso o problema guía planteado por el docente.",
+        "2. Identificar los elementos esenciales de Fracciones equivalentes y representación gráfica utilizando Proyector interactivo.",
+        "3. Desarrollar la solución en parejas aplicando la metodología Aprendizaje Basado en Problemas y Manipulativo.",
+        "4. Sintetizar las conclusiones en un esquema visual conjunto."
+      ],
+      "pedagogical_support": "Modelado inicial por parte del docente con 1 ejemplo resuelto paso a paso.",
+      "expected_deliverable": "Esquema o solución fundamentada del problema en el cuaderno o formato de trabajo."
+    },
+    "reinforcement_activity": {
+      "level": "refuerzo",
+      "title": "Paso a Paso Guiado: Fundamentos de Fracciones equivalentes y representación gráfica",
+      "description": "Diseñada para afianzar conceptos previos y brindar seguridad metodológica a estudiantes que requieren ritmo más pautado.",
+      "step_by_step_instructions": [
+        "1. Observar la tarjeta de apoyo visual que desglosa Fracciones equivalentes y representación gráfica en 3 partes fundamentales.",
+        "2. Completar los dos primeros ejercicios guiados con apoyo de pistas gráficas.",
+        "3. Contrastar las respuestas con la pareja de aprendizaje antes de continuar.",
+        "4. Formular en una frase sencilla qué significa el concepto aprendido."
+      ],
+      "pedagogical_support": "Instrucciones segmentadas con apoyos visuales (Instrucciones breves y segmentadas por pasos). Menor cantidad de ítems.",
+      "expected_deliverable": "Ficha de andamiaje con ejercicios base completados y autoverificados."
+    },
+    "deepening_activity": {
+      "level": "profundizacion",
+      "title": "Laboratorio Creativo: Reto Avanzado de Fracciones equivalentes y representación gráfica",
+      "description": "Para estudiantes con avance acelerado que buscan transferir Fracciones equivalentes y representación gráfica a situaciones complejas o de la vida real.",
+      "step_by_step_instructions": [
+        "1. Analizar un dilema o situación cotidiana no estructurada vinculada a Fracciones equivalentes y representación gráfica.",
+        "2. Diseñar una propuesta innovadora o método alternativo de resolución.",
+        "3. Crear una analogía o mini-guía explicativa para enseñar este concepto a otros compañeros.",
+        "4. Proponer 2 preguntas desafiantes que inviten al debate grupal."
+      ],
+      "pedagogical_support": "Preguntas metacognitivas abiertas y autonomía investigativa.",
+      "expected_deliverable": "Propuesta de transferencia aplicada o recurso didáctico creado para el aula."
+    },
+    "adapted_activity": {
+      "level": "adaptada",
+      "title": "Versión Accesible DUA: Fracciones equivalentes y representación gráfica con Apoyo Multinivel",
+      "description": "Ajuste específico para estudiantes que requieren adecuaciones de acceso y formato (Instrucciones breves y segmentadas por pasos; Apoyo visual reforzado (gráficos e infografías); Menor densidad de ejercicios por hoja; Tiempo flexible para procesar cálculos), sin reducir la dignidad del aprendizaje.",
+      "step_by_step_instructions": [
+        "1. Revisar la lámina ilustrada con pictogramas/esquema que resume la idea clave de Fracciones equivalentes y representación gráfica.",
+        "2. Realizar la actividad manipulativa o de emparejamiento utilizando Cuadernos de trabajo.",
+        "3. Expresar la respuesta seleccionando opciones visuales o mediante explicación oral grabada/asistida.",
+        "4. Recibir retroalimentación inmediata y celebrar el progreso del logro alcanzado."
+      ],
+      "pedagogical_support": "Ajustes razonables activos: Instrucciones breves y segmentadas por pasos; Apoyo visual reforzado (gráficos e infografías); Menor densidad de ejercicios por hoja; Tiempo flexible para procesar cálculos. Reducción de carga cognitiva textual y apoyo de mediador.",
+      "expected_deliverable": "Registro gráfico o selección de opciones verificada con el docente."
+    },
+    "pedagogical_rationale": "Diseño Universal para el Aprendizaje (DUA). Permite al docente de 5° de Primaria atender la diversidad de ritmos en un solo espacio pedagógico sin segregar a los estudiantes.",
+    "created_at": "2026-10-05T16:38:03.748843",
+    "resource_type": "activity_set",
+    "saved_at": "2026-10-05T16:38:03.758291"
+  },
+  {
+    "id": "plan-67ab958d",
+    "classroom_id": "aula-8vo-ciencias",
+    "topic": "Suma y resta de fracciones con igual y diferente denominador",
+    "title": "Secuencia Didáctica: Suma y resta de fracciones con igual y diferente denominador en el contexto de 8° de Secundaria",
+    "grade": "8° de Secundaria",
+    "subject": "Ciencias Naturales y Educación Ambiental",
+    "learning_objective": "Resolver situaciones problemáticas cotidianas utilizando adición y sustracción de fracciones",
+    "competencies": [
+      "Pensamiento numérico",
+      "razonamiento matemático",
+      "comunicación asertiva"
+    ],
+    "phases": [
+      {
+        "phase_name": "Inicio / Enganche y Activación de Saberes",
+        "duration_minutes": 12,
+        "teacher_action": "El docente presenta un detonante cotidiano sobre 'Suma y resta de fracciones con igual y diferente denominador' mediante Tablero acrílico. Explica el propósito en lenguaje claro y modela visualmente el concepto clave.",
+        "student_action": "Los estudiantes participan respondiendo preguntas cortas, comparten experiencias previas en parejas y activan organizadores gráficos rápidos en sus cuadernos.",
+        "required_materials": [
+          "Tablero acrílico",
+          "Guía visual introductoria"
+        ]
+      },
+      {
+        "phase_name": "Desarrollo / Exploración Guiada y Práctica Multinivel",
+        "duration_minutes": 36,
+        "teacher_action": "Implementa la metodología 'Aprendizaje Basado en la Indagación y Trabajo Colaborativo'. Dosifica la instrucción en 2 momentos breves. Circula por el aula ofreciendo andamiaje diferenciado (apoyos específicos: Estructuración explícita de roles en trabajo en equipo, Glosario previo de conceptos científicos).",
+        "student_action": "Trabajan en equipos heterogéneos resolviendo situaciones prácticas sobre 'Suma y resta de fracciones con igual y diferente denominador'. Utilizan Conexión a internet intermitente para experimentar y contrastar soluciones.",
+        "required_materials": [
+          "Tablero acrílico",
+          "Materiales reciclables de laboratorio escolar",
+          "Conexión a internet intermitente"
+        ]
+      },
+      {
+        "phase_name": "Cierre / Metacognición y Síntesis Inclusiva",
+        "duration_minutes": 12,
+        "teacher_action": "Facilita una ronda de síntesis con semáforo de autoevaluación o ticket de salida con apoyos gráficos. Refuerza positivamente los logros observados.",
+        "student_action": "Cada estudiante completa un ticket de salida (opción escrita, gráfica o verbal) respondiendo: ¿Qué descubrí hoy sobre este tema y qué duda aún tengo?",
+        "required_materials": [
+          "Ticket de salida / organizador de síntesis"
+        ]
+      }
+    ],
+    "universal_design_adaptations": [
+      "Principio DUA (Múltiples formas de representación): Estructuración explícita de roles en trabajo en equipo.",
+      "Principio DUA (Múltiples formas de acción y expresión): Permitir entregables orales, esquemáticos o escritos según la preferencia del estudiante.",
+      "Ajuste razonable de tiempo: Segmentación del desarrollo en bloques de 15 minutos con comprobación de comprensión intermedia.",
+      "Acompañamiento entre pares: Asignación de parejas de apoyo colaborativo sin sobrecargar a ningún estudiante."
+    ],
+    "formative_evaluation_strategy": "Observación formativa con lista de cotejo cualitativa durante la fase de desarrollo y ticket de salida de metacognición.",
+    "learning_evidences": [
+      "Ficha o producto de trabajo sobre Suma y resta de fracciones con igual y diferente denominador completado en equipo o individualmente.",
+      "Registro de participación y autoevaluación en el ticket de salida."
+    ],
+    "created_at": "2026-10-05T16:37:46.369195",
+    "resource_type": "lesson_plan",
+    "saved_at": "2026-10-05T16:37:46.393656"
+  },
+  {
+    "id": "plan-1ed7e71e",
+    "classroom_id": "aula-3ro-lengua",
+    "topic": "Suma y resta de fracciones con igual y diferente denominador",
+    "title": "Secuencia Didáctica: Suma y resta de fracciones con igual y diferente denominador en el contexto de 3° de Primaria",
+    "grade": "3° de Primaria",
+    "subject": "Lengua Castellana",
+    "learning_objective": "Resolver situaciones problemáticas cotidianas utilizando adición y sustracción de fracciones",
+    "competencies": [
+      "Pensamiento numérico",
+      "razonamiento matemático",
+      "comunicación asertiva"
+    ],
+    "phases": [
+      {
+        "phase_name": "Inicio / Enganche y Activación de Saberes",
+        "duration_minutes": 9,
+        "teacher_action": "El docente presenta un detonante cotidiano sobre 'Suma y resta de fracciones con igual y diferente denominador' mediante Biblioteca de aula. Explica el propósito en lenguaje claro y modela visualmente el concepto clave.",
+        "student_action": "Los estudiantes participan respondiendo preguntas cortas, comparten experiencias previas en parejas y activan organizadores gráficos rápidos en sus cuadernos.",
+        "required_materials": [
+          "Biblioteca de aula",
+          "Guía visual introductoria"
+        ]
+      },
+      {
+        "phase_name": "Desarrollo / Exploración Guiada y Práctica Multinivel",
+        "duration_minutes": 27,
+        "teacher_action": "Implementa la metodología 'Taller de Lectoescritura Creativa y Gamificación'. Dosifica la instrucción en 2 momentos breves. Circula por el aula ofreciendo andamiaje diferenciado (apoyos específicos: Uso de pictogramas y organizadores gráficos, Lectura guiada en voz alta con pausas activas).",
+        "student_action": "Trabajan en equipos heterogéneos resolviendo situaciones prácticas sobre 'Suma y resta de fracciones con igual y diferente denominador'. Utilizan Parlante de audio para narraciones para experimentar y contrastar soluciones.",
+        "required_materials": [
+          "Biblioteca de aula",
+          "Láminas ilustradas",
+          "Parlante de audio para narraciones"
+        ]
+      },
+      {
+        "phase_name": "Cierre / Metacognición y Síntesis Inclusiva",
+        "duration_minutes": 9,
+        "teacher_action": "Facilita una ronda de síntesis con semáforo de autoevaluación o ticket de salida con apoyos gráficos. Refuerza positivamente los logros observados.",
+        "student_action": "Cada estudiante completa un ticket de salida (opción escrita, gráfica o verbal) respondiendo: ¿Qué descubrí hoy sobre este tema y qué duda aún tengo?",
+        "required_materials": [
+          "Ticket de salida / organizador de síntesis"
+        ]
+      }
+    ],
+    "universal_design_adaptations": [
+      "Principio DUA (Múltiples formas de representación): Uso de pictogramas y organizadores gráficos.",
+      "Principio DUA (Múltiples formas de acción y expresión): Permitir entregables orales, esquemáticos o escritos según la preferencia del estudiante.",
+      "Ajuste razonable de tiempo: Segmentación del desarrollo en bloques de 15 minutos con comprobación de comprensión intermedia.",
+      "Acompañamiento entre pares: Asignación de parejas de apoyo colaborativo sin sobrecargar a ningún estudiante."
+    ],
+    "formative_evaluation_strategy": "Observación formativa con lista de cotejo cualitativa durante la fase de desarrollo y ticket de salida de metacognición.",
+    "learning_evidences": [
+      "Ficha o producto de trabajo sobre Suma y resta de fracciones con igual y diferente denominador completado en equipo o individualmente.",
+      "Registro de participación y autoevaluación en el ticket de salida."
+    ],
+    "created_at": "2026-10-05T16:35:40.745636",
+    "resource_type": "lesson_plan",
+    "saved_at": "2026-10-05T16:35:40.746180"
+  },
+  {
     "id": "plan-a62ebfe4",
     "classroom_id": "aula-5to-matematicas",
     "topic": "Suma y resta de fracciones",
