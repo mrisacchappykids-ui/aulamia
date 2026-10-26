@@ -16,13 +16,17 @@ import {
   ShieldCheck,
   CheckCircle2,
   FileText,
-  FolderArchive
+  FolderArchive,
+  LogIn,
+  UserPlus
 } from "lucide-react";
 import ClassroomContextBadge from "@/components/ClassroomContextBadge";
 import { getClassrooms, getStats } from "@/lib/api";
 import { ClassroomProfile, DashboardStats } from "@/types";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Dashboard() {
+  const { user, openLoginModal, openRegisterModal } = useAuth();
   const [classrooms, setClassrooms] = useState<ClassroomProfile[]>([]);
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>("");
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -60,18 +64,18 @@ export default function Dashboard() {
       href: "/planeaciones",
       icon: BookOpen,
       color: "from-blue-600 to-indigo-600",
-      badge: "Didáctica Estructurada",
+      badge: "Secuencia Didáctica",
     },
     {
       title: "Actividades Diferenciadas",
-      desc: "Genera 4 niveles en un solo clic: Actividad Base, Refuerzo, Profundización y Adaptada.",
+      desc: "Generación simultánea en 4 niveles: Base, Refuerzo, Profundización y Adaptada para inclusión.",
       href: "/actividades",
       icon: Layers,
-      color: "from-indigo-600 to-purple-600",
-      badge: "Multinivel DUA",
+      color: "from-indigo-600 to-violet-600",
+      badge: "4 Niveles",
     },
     {
-      title: "Evaluaciones y Rúbricas",
+      title: "Evaluaciones & Rúbricas",
       desc: "Pruebas formativas con pistas de andamiaje cognitivo y rúbricas cualitativas de 4 niveles.",
       href: "/evaluaciones",
       icon: CheckSquare,
@@ -154,6 +158,64 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Teacher Authentication Status Card */}
+      {user ? (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 md:p-5 bg-gradient-to-r from-brand-50/90 via-indigo-50/60 to-purple-50/60 border border-brand-200/80 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-sm shadow-brand-500/20">
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm md:text-base font-bold text-slate-900">
+                  ¡Hola, Prof. {user.name}! 👋
+                </h2>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  Docente Activo
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                {user.specialty} • <span className="font-medium text-slate-700">{user.institution}</span>
+              </p>
+            </div>
+          </div>
+          <div className="text-[11px] text-slate-500 bg-white/80 px-3 py-1.5 rounded-xl border border-slate-200/60">
+            Tus planeaciones y perfiles se asocian a tu cuenta
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 md:p-5 bg-white border border-slate-200/90 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center border border-brand-100">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs md:text-sm font-bold text-slate-800">
+                Identifícate como Docente en AulaMIA
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Inicia sesión o regístrate para personalizar tus aulas y exportar tus recursos
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={openLoginModal}
+              className="flex-1 sm:flex-initial px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+            >
+              Iniciar Sesión
+            </button>
+            <button
+              onClick={openRegisterModal}
+              className="flex-1 sm:flex-initial px-4 py-2 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors shadow-sm"
+            >
+              Registrarse
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Classroom Context Switcher */}
       <ClassroomContextBadge
         classrooms={classrooms}
@@ -184,83 +246,112 @@ export default function Dashboard() {
             </div>
           </div>
           <p className="text-2xl font-black text-slate-900 mt-2">
-            {stats ? `${stats.estimated_hours_saved} h` : "4.5 h"}
+            {stats ? `${stats.estimated_hours_saved}h` : "4.5h"}
           </p>
-          <p className="text-[11px] text-emerald-600 font-semibold mt-1">Tiempo docente recuperado</p>
+          <p className="text-[11px] text-slate-400 mt-1">Tiempo docente optimizado</p>
         </div>
 
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Apoyos DUA Activos</span>
+            <span className="text-xs font-medium text-slate-500">Valoración Docente</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-slate-900 mt-2">
+            {stats && stats.average_pedagogical_rating ? stats.average_pedagogical_rating.toFixed(1) : "4.9"} / 5
+          </p>
+          <p className="text-[11px] text-slate-400 mt-1">Relevancia y pertinencia DUA</p>
+        </div>
+
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Ajustes Inclusivos</span>
             <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-900 mt-2">
-            {activeClassroom ? activeClassroom.inclusion_support_needs.length : 4}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-1">Estrategias de inclusión en curso</p>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Pertinencia Pedagógica</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Star className="w-4 h-4 fill-amber-400" />
-            </div>
-          </div>
-          <p className="text-2xl font-black text-slate-900 mt-2">
-            {stats?.average_pedagogical_rating ? `${stats.average_pedagogical_rating} / 5.0` : "4.9 / 5.0"}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-1">
-            {stats?.feedback_responses_count ? `${stats.feedback_responses_count} valoraciones docentes` : "Valoración cualitativa docente"}
-          </p>
+          <p className="text-2xl font-black text-slate-900 mt-2">100%</p>
+          <p className="text-[11px] text-slate-400 mt-1">Enfoque DUA sin etiquetas</p>
         </div>
       </div>
 
-      {/* Modules Launcher Grid */}
+      {/* Main Feature Banner: Adaptar para mi Aula */}
+      <div className="rounded-3xl bg-gradient-to-r from-fuchsia-600 via-pink-600 to-rose-600 text-white p-6 md:p-8 shadow-lg shadow-pink-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold backdrop-blur">
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+            Herramienta Estrella Diferencial
+          </div>
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+            “Adaptar para mi aula”: Transforma cualquier consigna en 1 Clic
+          </h2>
+          <p className="text-xs md:text-sm text-pink-100 leading-relaxed">
+            ¿Encontraste un taller en internet, una actividad de un libro o una guía externa que es muy difícil o poco accesible para tu grupo? Pégala y AulaMIA la rediseñará aplicando los apoyos DUA y el ritmo de aprendizaje de tu aula activa.
+          </p>
+        </div>
+        <Link
+          href="/adaptar"
+          className="shrink-0 inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-white text-fuchsia-700 font-bold text-sm shadow-md hover:bg-pink-50 transition-all hover:scale-105 active:scale-95"
+        >
+          Probar Adaptación Ahora
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+
+      {/* Module Grid */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Módulos Pedagógicos</h2>
-            <p className="text-xs text-slate-500">
-              Genera recursos directamente vinculados al aula: <span className="font-semibold text-brand-600">{activeClassroom?.name}</span>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              Módulos de Asistencia Pedagógica
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Genera recursos contextualizados para {activeClassroom ? activeClassroom.name : "tu aula"}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {modules.map((m, idx) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {modules.map((m) => {
             const Icon = m.icon;
             return (
               <Link
-                key={idx}
+                key={m.href}
                 href={m.href}
-                className={`group relative bg-white border rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between ${
+                className={`group relative rounded-2xl p-6 bg-white border transition-all duration-200 flex flex-col justify-between hover:-translate-y-1 ${
                   m.highlight
-                    ? "border-brand-200 ring-2 ring-brand-500/10 hover:border-brand-300"
-                    : "border-slate-200/80 hover:border-slate-300"
+                    ? "border-pink-300 ring-2 ring-pink-500/20 shadow-md shadow-pink-500/10 hover:shadow-lg hover:shadow-pink-500/20"
+                    : "border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md"
                 }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${m.color} text-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+                    <div
+                      className={`w-12 h-12 rounded-xl bg-gradient-to-tr ${m.color} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}
+                    >
                       <Icon className="w-6 h-6" />
                     </div>
-                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        m.highlight
+                          ? "bg-pink-100 text-pink-700 font-extrabold"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
                       {m.badge}
                     </span>
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-brand-600 transition-colors">
+                  <h3 className="font-bold text-slate-900 group-hover:text-brand-600 transition-colors text-base mb-1.5">
                     {m.title}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                  <p className="text-xs text-slate-500 leading-relaxed">
                     {m.desc}
                   </p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-700 group-hover:text-brand-600">
-                  <span>Abrir generador</span>
+                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-slate-700 group-hover:text-brand-600">
+                  <span>Acceder al módulo</span>
                   <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>

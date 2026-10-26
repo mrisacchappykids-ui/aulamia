@@ -1,0 +1,13 @@
+[
+  {
+    "id": "usr-demo-docente",
+    "name": "Profesor Demo AulaMIA",
+    "email": "profesor@aulamia.edu.co",
+    "password_hash": "af829e37beed02339db0d32d8cc1a4daeefad84c11ce39064ac582acf998e58b",
+    "salt": "8e1e448cf06c97444d1019e0b7c71512",
+    "institution": "Colegio San José - Sede Principal",
+    "specialty": "Docente de Primaria y Tecnología",
+    "role": "Docente",
+    "created_at": "2026-10-26T17:37:27.735249"
+  }
+]

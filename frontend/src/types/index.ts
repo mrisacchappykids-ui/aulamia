@@ -179,3 +179,36 @@ export interface FeedbackRating {
   qualitative_comment?: string;
 }
 
+
+
+// ----------------- Authentication Types -----------------
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  institution: string;
+  specialty: string;
+  role: string;
+  created_at: string;
+}
+
+export interface UserRegisterData {
+  name: string;
+  email: string;
+  password: string;
+  institution?: string;
+  specialty?: string;
+  role?: string;
+}
+
+export interface UserLoginData {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  message: string;
+  token: string;
+  user: User;
+}

@@ -215,3 +215,31 @@ class FeedbackRating(BaseModel):
     estimated_minutes_saved: int = Field(60, ge=5)
     qualitative_comment: Optional[str] = None
 
+
+# ----------------- Authentication Schemas -----------------
+
+class UserRegisterRequest(BaseModel):
+    name: str = Field(..., min_length=2, example='María Rodríguez')
+    email: str = Field(..., min_length=5, example='maria.rodriguez@aulamia.edu.co')
+    password: str = Field(..., min_length=6, example='docente123')
+    institution: Optional[str] = Field('Institución Educativa', example='Colegio San José')
+    specialty: Optional[str] = Field('Docente de Aula', example='Matemáticas y Tecnología')
+    role: Optional[str] = Field('Docente', example='Docente')
+
+class UserLoginRequest(BaseModel):
+    email: str = Field(..., example='profesor@aulamia.edu.co')
+    password: str = Field(..., example='docente123')
+
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    institution: str
+    specialty: str
+    role: str
+    created_at: str
+
+class AuthResponse(BaseModel):
+    message: str
+    token: str
+    user: UserResponse

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import PROJECT_NAME, VERSION, DESCRIPTION, CORS_ORIGINS
-from app.routers import classrooms, planner, activities, evaluations, games, adaptations, resources, materials
+from app.routers import classrooms, planner, activities, evaluations, games, adaptations, resources, materials, auth
 
 app = FastAPI(
     title=PROJECT_NAME,
@@ -21,6 +21,8 @@ app.add_middleware(
 )
 
 # Register routers
+app.include_router(auth.router)
+app.include_router(auth.router, prefix="/api")  # Compatibility for /api/auth/*
 app.include_router(classrooms.router)
 app.include_router(planner.router)
 app.include_router(activities.router)

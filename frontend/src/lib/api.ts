@@ -7,7 +7,10 @@ import {
   AdaptationResult,
   DashboardStats,
   EducationalMaterial,
-  FeedbackRating
+  FeedbackRating,
+  UserRegisterData,
+  UserLoginData,
+  AuthResponse
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -24,8 +27,14 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
     });
 
     if (!res.ok) {
-      const errorBody = await res.text();
-      throw new Error(`Error en API (${res.status}): ${errorBody || res.statusText}`);
+      let errorBody = "";
+      try {
+        const errJson = await res.json();
+        errorBody = errJson.detail || errJson.message || JSON.stringify(errJson);
+      } catch {
+        errorBody = await res.text();
+      }
+      throw new Error(errorBody || `Error en API (${res.status}): ${res.statusText}`);
     }
 
     return await res.json();
@@ -33,6 +42,26 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
     console.error(`API Request failed on ${endpoint}:`, err);
     throw err;
   }
+}
+
+// ----------------- Authentication -----------------
+
+export async function registerUser(data: UserRegisterData): Promise<AuthResponse> {
+  return fetchJson<AuthResponse>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function loginUser(data: UserLoginData): Promise<AuthResponse> {
+  return fetchJson<AuthResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function demoLogin(): Promise<AuthResponse> {
+  return fetchJson<AuthResponse>("/auth/demo-login");
 }
 
 // ----------------- Classroom Profiles -----------------
@@ -161,4 +190,3 @@ export async function submitFeedback(data: FeedbackRating): Promise<{ message: s
     body: JSON.stringify(data),
   });
 }
-
