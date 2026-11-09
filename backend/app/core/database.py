@@ -1,8 +1,8 @@
 import json
-from typing import Optional
+from typing import Optional, Dict, Any
 from sqlalchemy import create_engine, Column, String, Integer, Text, JSON
 from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session
-from app.core.config import DATABASE_URL
+from app.core.config import DATABASE_URL, DATA_DIR
 
 Base = declarative_base()
 
@@ -36,7 +36,7 @@ class ClassroomDB(Base):
             "available_resources": self.available_resources if isinstance(self.available_resources, list) else json.loads(self.available_resources or "[]"),
             "general_learning_pace": self.general_learning_pace,
             "inclusion_support_needs": self.inclusion_support_needs if isinstance(self.inclusion_support_needs, list) else json.loads(self.inclusion_support_needs or "[]"),
-            "notes": self.notes,
+            "notes": self.notes or "",
             "created_at": self.created_at,
         }
 
@@ -82,23 +82,71 @@ class FeedbackDB(Base):
 
 engine = None
 SessionLocal = None
+_db_status = {
+    "mode": "uninitialized",
+    "postgres_connected": False,
+    "error": None
+}
 
-if DATABASE_URL:
+def init_database():
+    global engine, SessionLocal, _db_status
+
+    if DATABASE_URL:
+        try:
+            pg_engine = create_engine(
+                DATABASE_URL,
+                pool_pre_ping=True,
+                pool_recycle=300,
+                pool_size=5,
+                max_overflow=10,
+            )
+            # Test connection
+            with pg_engine.connect() as conn:
+                pass
+
+            Base.metadata.create_all(bind=pg_engine)
+            engine = pg_engine
+            SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+            _db_status = {
+                "mode": "postgres",
+                "postgres_connected": True,
+                "error": None
+            }
+            print("Successfully connected to Supabase PostgreSQL!")
+            return
+        except Exception as e:
+            err_msg = str(e)
+            print(f"PostgreSQL connection failed ({err_msg}). Falling back to resilient SQLite...")
+            _db_status = {
+                "mode": "sqlite_fallback",
+                "postgres_connected": False,
+                "error": err_msg
+            }
+
+    # Fallback: SQLite in writable DATA_DIR (works on local and Vercel /tmp)
     try:
-        engine = create_engine(
-            DATABASE_URL,
-            pool_pre_ping=True,
-            pool_recycle=300,
-            pool_size=5,
-            max_overflow=10,
-        )
+        sqlite_file = DATA_DIR / "aulamia.db"
+        sqlite_url = f"sqlite:///{sqlite_file}"
+        sqlite_engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
+        Base.metadata.create_all(bind=sqlite_engine)
+        engine = sqlite_engine
         SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
-        # Ensure tables exist
-        Base.metadata.create_all(bind=engine)
+        if _db_status["mode"] != "sqlite_fallback":
+            _db_status = {
+                "mode": "sqlite",
+                "postgres_connected": False,
+                "error": "No DATABASE_URL configured"
+            }
+        print(f"Resilient database active: {sqlite_url}")
     except Exception as e:
-        print(f"Warning: Failed to connect to database at startup: {e}")
+        print(f"Fatal error initializing fallback database: {e}")
         engine = None
         SessionLocal = None
+
+init_database()
+
+def get_db_status() -> Dict[str, Any]:
+    return _db_status
 
 def get_db():
     if SessionLocal:

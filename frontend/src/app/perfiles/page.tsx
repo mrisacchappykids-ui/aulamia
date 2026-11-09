@@ -66,8 +66,9 @@ export default function PerfilesPage() {
       setName("");
       notes && setNotes("");
       fetchProfiles();
-    } catch (err) {
-      alert("Error al guardar el perfil del aula");
+    } catch (err: any) {
+      console.error("Error creating classroom profile:", err);
+      alert(`Error al guardar el perfil del aula: ${err?.message || "Verifique la conexión con el servidor"}`);
     } finally {
       setSaving(false);
     }

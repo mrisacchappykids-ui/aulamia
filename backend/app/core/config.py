@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+SEED_DATA_DIR = BASE_DIR / "data"
 
 def resolve_data_dir() -> Path:
     """
@@ -69,7 +70,7 @@ CORS_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:3001",
     "https://aulamia-76ay.vercel.app",
-    "https://*.vercel.app"
+    "https://aulamia-hrokwejal-mr-isaacc.vercel.app",
 ]
 
 def get_database_url() -> str:

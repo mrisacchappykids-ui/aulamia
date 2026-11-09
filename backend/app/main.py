@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import PROJECT_NAME, VERSION, DESCRIPTION, CORS_ORIGINS
+from app.core.database import get_db_status
 from app.routers import classrooms, planner, activities, evaluations, games, adaptations, resources, materials, auth
 
 app = FastAPI(
@@ -44,3 +45,7 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+@app.get("/health/db")
+def health_db():
+    return get_db_status()

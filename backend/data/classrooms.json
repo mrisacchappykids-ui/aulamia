@@ -1,6 +1,24 @@
 [
   {
-    "id": "aula-5to-matematicas",
+    "name": "GRADO 6",
+    "grade": "5 de Primaria",
+    "subject": "Matematicas",
+    "student_count": 25,
+    "average_age": 10,
+    "session_duration_minutes": 60,
+    "methodology": "ABP",
+    "available_resources": [
+      "Proyector"
+    ],
+    "general_learning_pace": "Ritmo",
+    "inclusion_support_needs": [
+      "Instrucciones"
+    ],
+    "notes": "",
+    "id": "aula-69fb3ee0",
+    "created_at": "2026-11-09T16:20:05.123462"
+  },
+  {
     "name": "5° Primaria - Matemáticas Inclusiva",
     "grade": "5° de Primaria",
     "subject": "Matemáticas",
@@ -22,10 +40,10 @@
       "Tiempo flexible para procesar cálculos"
     ],
     "notes": "Tres estudiantes requieren andamiaje visual paso a paso; dos estudiantes tienen ritmo de avance rápido.",
+    "id": "aula-5to-matematicas",
     "created_at": "2026-09-14T18:37:26.205966"
   },
   {
-    "id": "aula-8vo-ciencias",
     "name": "8° Secundaria - Ciencias Naturales",
     "grade": "8° de Secundaria",
     "subject": "Ciencias Naturales y Educación Ambiental",
@@ -45,10 +63,10 @@
       "Alternativas orales y gráficas para entregables"
     ],
     "notes": "Énfasis en vincular la temática con el entorno local del estudiante.",
+    "id": "aula-8vo-ciencias",
     "created_at": "2026-09-14T18:37:26.206001"
   },
   {
-    "id": "aula-3ro-lengua",
     "name": "3° Primaria - Lenguaje y Comunicación",
     "grade": "3° de Primaria",
     "subject": "Lengua Castellana",
@@ -68,6 +86,7 @@
       "Consignas con modelado previo del docente"
     ],
     "notes": "Atención especial a la comprensión lectora literal e inferencial.",
+    "id": "aula-3ro-lengua",
     "created_at": "2026-09-14T18:37:26.206005"
   }
 ]

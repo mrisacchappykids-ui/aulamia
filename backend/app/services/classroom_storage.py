@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pathlib import Path
-from app.core.config import DATA_DIR
+from app.core.config import DATA_DIR, SEED_DATA_DIR
 from app.models.schemas import ClassroomProfile, ClassroomProfileBase
 from app.core.database import SessionLocal, ClassroomDB, ResourceDB, FeedbackDB
 
@@ -35,7 +35,7 @@ DEFAULT_CLASSROOMS = [
             "Tiempo flexible para procesar cálculos"
         ],
         "notes": "Tres estudiantes requieren andamiaje visual paso a paso; dos estudiantes tienen ritmo de avance rápido.",
-        "created_at": datetime.now().isoformat()
+        "created_at": "2026-09-14T18:37:26.205966"
     },
     {
         "id": "aula-8vo-ciencias",
@@ -58,7 +58,7 @@ DEFAULT_CLASSROOMS = [
             "Alternativas orales y gráficas para entregables"
         ],
         "notes": "Énfasis en vincular la temática con el entorno local del estudiante.",
-        "created_at": datetime.now().isoformat()
+        "created_at": "2026-09-14T18:37:26.206001"
     },
     {
         "id": "aula-3ro-lengua",
@@ -81,65 +81,99 @@ DEFAULT_CLASSROOMS = [
             "Consignas con modelado previo del docente"
         ],
         "notes": "Atención especial a la comprensión lectora literal e inferencial.",
-        "created_at": datetime.now().isoformat()
+        "created_at": "2026-09-14T18:37:26.206005"
     }
 ]
 
 class ClassroomStorage:
-    @staticmethod
-    def _load_data(file_path: Path, default_data: Any) -> Any:
-        if not file_path.exists():
-            ClassroomStorage._save_data(file_path, default_data)
-            return default_data
+    _memory_cache: Dict[str, Any] = {}
+
+    @classmethod
+    def _seed_db_if_empty(cls, db) -> None:
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
+            count = db.query(ClassroomDB).count()
+            if count == 0:
+                for d in DEFAULT_CLASSROOMS:
+                    item = ClassroomDB(
+                        id=d["id"],
+                        name=d["name"],
+                        grade=d["grade"],
+                        subject=d["subject"],
+                        student_count=d["student_count"],
+                        average_age=d["average_age"],
+                        session_duration_minutes=d["session_duration_minutes"],
+                        methodology=d["methodology"],
+                        available_resources=d["available_resources"],
+                        general_learning_pace=d["general_learning_pace"],
+                        inclusion_support_needs=d["inclusion_support_needs"],
+                        notes=d.get("notes"),
+                        created_at=d["created_at"],
+                    )
+                    db.add(item)
+                db.commit()
+        except Exception as e:
+            print(f"Error seeding database defaults: {e}")
+            db.rollback()
+
+    @classmethod
+    def _load_data(cls, file_path: Path, default_data: Any) -> Any:
+        cache_key = file_path.name
+        if cache_key in cls._memory_cache:
+            return cls._memory_cache[cache_key]
+
+        if not file_path.exists():
+            seed_file = SEED_DATA_DIR / file_path.name
+            if seed_file.exists():
+                try:
+                    with open(seed_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    cls._save_data(file_path, data)
+                    cls._memory_cache[cache_key] = data
+                    return data
+                except Exception:
+                    pass
+            cls._save_data(file_path, default_data)
+            cls._memory_cache[cache_key] = default_data
             return default_data
 
-    @staticmethod
-    def _save_data(file_path: Path, data: Any) -> None:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                cls._memory_cache[cache_key] = data
+                return data
+        except Exception:
+            return cls._memory_cache.get(cache_key, default_data)
+
+    @classmethod
+    def _save_data(cls, file_path: Path, data: Any) -> None:
+        cache_key = file_path.name
+        cls._memory_cache[cache_key] = data
         try:
             file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-        except (OSError, PermissionError):
-            import tempfile
-            tmp_target = Path(tempfile.gettempdir()) / "aulamia_data" / file_path.name
-            tmp_target.parent.mkdir(parents=True, exist_ok=True)
-            with open(tmp_target, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"File save warning (using memory cache): {e}")
+            try:
+                import tempfile
+                tmp_target = Path(tempfile.gettempdir()) / "aulamia_data" / file_path.name
+                tmp_target.parent.mkdir(parents=True, exist_ok=True)
+                with open(tmp_target, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
 
     @classmethod
     def get_all(cls) -> List[ClassroomProfile]:
         if SessionLocal:
             db = SessionLocal()
             try:
+                cls._seed_db_if_empty(db)
                 records = db.query(ClassroomDB).order_by(ClassroomDB.created_at.desc()).all()
-                if not records:
-                    # Seed defaults into database
-                    for d in DEFAULT_CLASSROOMS:
-                        item = ClassroomDB(
-                            id=d["id"],
-                            name=d["name"],
-                            grade=d["grade"],
-                            subject=d["subject"],
-                            student_count=d["student_count"],
-                            average_age=d["average_age"],
-                            session_duration_minutes=d["session_duration_minutes"],
-                            methodology=d["methodology"],
-                            available_resources=d["available_resources"],
-                            general_learning_pace=d["general_learning_pace"],
-                            inclusion_support_needs=d["inclusion_support_needs"],
-                            notes=d.get("notes"),
-                            created_at=d["created_at"],
-                        )
-                        db.add(item)
-                    db.commit()
-                    records = db.query(ClassroomDB).all()
-                return [ClassroomProfile(**r.to_dict()) for r in records]
+                if records:
+                    return [ClassroomProfile(**r.to_dict()) for r in records]
             except Exception as e:
-                print(f"Database query error (falling back to JSON): {e}")
+                print(f"Database query error (falling back to cache): {e}")
                 db.rollback()
             finally:
                 db.close()
@@ -174,6 +208,7 @@ class ClassroomStorage:
         if SessionLocal:
             db = SessionLocal()
             try:
+                cls._seed_db_if_empty(db)
                 record = ClassroomDB(
                     id=new_id,
                     created_at=created_time,
@@ -187,7 +222,7 @@ class ClassroomStorage:
                     available_resources=profile.available_resources,
                     general_learning_pace=profile.general_learning_pace,
                     inclusion_support_needs=profile.inclusion_support_needs,
-                    notes=profile.notes,
+                    notes=profile.notes or "",
                 )
                 db.add(record)
                 db.commit()
@@ -225,7 +260,7 @@ class ClassroomStorage:
                     record.available_resources = profile.available_resources
                     record.general_learning_pace = profile.general_learning_pace
                     record.inclusion_support_needs = profile.inclusion_support_needs
-                    record.notes = profile.notes
+                    record.notes = profile.notes or ""
                     db.commit()
                     return ClassroomProfile(**record.to_dict())
             except Exception as e:
@@ -312,7 +347,8 @@ class ClassroomStorage:
                 if resource_type:
                     q = q.filter_by(resource_type=resource_type)
                 records = q.order_by(ResourceDB.saved_at.desc()).all()
-                return [r.to_dict() for r in records]
+                if records:
+                    return [r.to_dict() for r in records]
             except Exception as e:
                 print(f"Database error in get_resources: {e}")
             finally:
