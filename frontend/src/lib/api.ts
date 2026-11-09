@@ -64,6 +64,14 @@ export async function demoLogin(): Promise<AuthResponse> {
   return fetchJson<AuthResponse>("/auth/demo-login");
 }
 
+export async function googleLogin(data: { credential?: string; email?: string; name?: string; picture?: string }): Promise<AuthResponse> {
+  return fetchJson<AuthResponse>("/auth/google", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+
 // ----------------- Classroom Profiles -----------------
 
 export async function getClassrooms(): Promise<ClassroomProfile[]> {

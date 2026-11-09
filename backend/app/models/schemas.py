@@ -243,3 +243,12 @@ class AuthResponse(BaseModel):
     message: str
     token: str
     user: UserResponse
+
+
+class GoogleAuthRequest(BaseModel):
+    credential: Optional[str] = None
+    email: Optional[str] = None
+    name: Optional[str] = None
+    picture: Optional[str] = None
+    institution: Optional[str] = "Instituci?n Educativa"
+    specialty: Optional[str] = "Docente de Aula"

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from app.models.schemas import UserRegisterRequest, UserLoginRequest, AuthResponse
+from app.models.schemas import UserRegisterRequest, UserLoginRequest, AuthResponse, GoogleAuthRequest
 from app.services import auth_storage
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
@@ -63,3 +63,16 @@ def get_current_user():
         "demo_user": "profesor@aulamia.edu.co",
         "authentication_mode": "local_storage_token"
     }
+
+@router.post("/google", response_model=AuthResponse)
+def google_auth(request: GoogleAuthRequest):
+    """
+    Inicia sesi?n o registra al docente utilizando cuenta de Google.
+    """
+    try:
+        return auth_storage.authenticate_google_user(request)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error autenticando con Google: {str(e)}"
+        )

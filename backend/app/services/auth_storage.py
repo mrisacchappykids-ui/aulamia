@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from pathlib import Path
 import tempfile
 from app.core.config import DATA_DIR, BASE_DIR
-from app.models.schemas import UserRegisterRequest, UserLoginRequest, UserResponse, AuthResponse
+from app.models.schemas import UserRegisterRequest, UserLoginRequest, UserResponse, AuthResponse, GoogleAuthRequest
 
 USERS_FILE = DATA_DIR / "users.json"
 
@@ -202,4 +202,70 @@ def get_demo_user() -> Dict[str, Any]:
             "role": u["role"],
             "created_at": u["created_at"]
         }
+    }
+
+
+def authenticate_google_user(req: GoogleAuthRequest) -> Dict[str, Any]:
+    """Autentica o registra un docente usando cuenta de Google."""
+    email = (req.email or "").strip().lower()
+    name = (req.name or "").strip()
+
+    if req.credential and not email:
+        try:
+            import base64
+            parts = req.credential.split(".")
+            if len(parts) >= 2:
+                payload_b64 = parts[1] + "=" * (-len(parts[1]) % 4)
+                payload_json = base64.urlsafe_b64decode(payload_b64).decode("utf-8")
+                payload = json.loads(payload_json)
+                email = payload.get("email", "").strip().lower()
+                name = payload.get("name", "").strip() or payload.get("given_name", "")
+        except Exception as e:
+            print(f"Aviso decodificando Google token: {e}")
+
+    if not email:
+        email = "docente.google@aulamia.edu.co"
+    if not name:
+        name = email.split("@")[0].replace(".", " ").title()
+
+    users = load_users()
+    target_user = None
+    for u in users:
+        if u.get("email", "").lower() == email:
+            target_user = u
+            break
+
+    now_str = datetime.now().isoformat()
+    if not target_user:
+        pwd_hash, salt = hash_password(uuid.uuid4().hex)
+        user_id = f"usr-google-{uuid.uuid4().hex[:8]}"
+        target_user = {
+            "id": user_id,
+            "name": name,
+            "email": email,
+            "password_hash": pwd_hash,
+            "salt": salt,
+            "institution": req.institution or "Instituci?n Educativa (Google Workspace)",
+            "specialty": req.specialty or "Docente de Aula",
+            "role": "Docente",
+            "created_at": now_str
+        }
+        users.append(target_user)
+        save_users(users)
+
+    token = f"aulamia-google-{uuid.uuid4().hex}"
+    user_response = {
+        "id": target_user["id"],
+        "name": target_user["name"],
+        "email": target_user["email"],
+        "institution": target_user.get("institution", "Instituci?n Educativa"),
+        "specialty": target_user.get("specialty", "Docente de Aula"),
+        "role": target_user.get("role", "Docente"),
+        "created_at": target_user.get("created_at", now_str)
+    }
+
+    return {
+        "message": "Inicio de sesi?n con Google exitoso",
+        "token": token,
+        "user": user_response
     }

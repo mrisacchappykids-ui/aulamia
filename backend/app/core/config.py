@@ -9,15 +9,36 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 def resolve_data_dir() -> Path:
     """
-    Retorna el directorio de datos garantizando permisos de escritura.
-    En entornos serverless (como Vercel o AWS Lambda) donde /var/task es de solo lectura,
-    utiliza el directorio temporal del sistema (/tmp/aulamia_data) inicializado con los
-    archivos JSON base.
+    Retorna un directorio de datos con permisos de ESCRITURA y LECTURA garantizados.
+    En entornos serverless (Vercel, AWS Lambda, Docker sin root, o /var/task),
+    copia los archivos JSON originales a /tmp/aulamia_data y retorna esa ruta para
+    que todas las lecturas y escrituras se hagan sobre la misma ruta con permisos totales.
     """
     base_data = BASE_DIR / "data"
-    test_file = base_data / ".write_test"
+
+    is_serverless = (
+        bool(os.getenv("VERCEL"))
+        or bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+        or "/var/task" in str(BASE_DIR)
+        or not os.access(str(BASE_DIR), os.W_OK)
+    )
+
+    if is_serverless:
+        tmp_data = Path(tempfile.gettempdir()) / "aulamia_data"
+        tmp_data.mkdir(parents=True, exist_ok=True)
+        if base_data.exists():
+            for src_file in base_data.glob("*.json"):
+                dest_file = tmp_data / src_file.name
+                if not dest_file.exists():
+                    try:
+                        shutil.copy2(src_file, dest_file)
+                    except Exception as e:
+                        print(f"Error copying {src_file.name} to tmp: {e}")
+        return tmp_data
+
     try:
         base_data.mkdir(parents=True, exist_ok=True)
+        test_file = base_data / ".write_test"
         test_file.touch(exist_ok=True)
         test_file.unlink(missing_ok=True)
         return base_data
@@ -30,8 +51,8 @@ def resolve_data_dir() -> Path:
                 if not dest_file.exists():
                     try:
                         shutil.copy2(src_file, dest_file)
-                    except Exception as e:
-                        print(f"Warning copying {src_file} to tmp: {e}")
+                    except Exception:
+                        pass
         return tmp_data
 
 DATA_DIR = resolve_data_dir()

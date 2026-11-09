@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User, UserLoginData, UserRegisterData } from "@/types";
-import { loginUser, registerUser, demoLogin } from "@/lib/api";
+import { loginUser, registerUser, demoLogin, googleLogin } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
@@ -16,6 +16,7 @@ interface AuthContextType {
   login: (data: UserLoginData) => Promise<void>;
   register: (data: UserRegisterData) => Promise<void>;
   loginAsDemo: () => Promise<void>;
+  loginWithGoogle: (data?: { credential?: string; email?: string; name?: string }) => Promise<void>;
   logout: () => void;
 }
 
@@ -88,6 +89,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginWithGoogle = async (data?: { credential?: string; email?: string; name?: string }) => {
+    setIsLoading(true);
+    try {
+      const res = await googleLogin(data || {});
+      saveSession(res.user, res.token);
+      setIsAuthModalOpen(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -127,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         loginAsDemo,
+        loginWithGoogle,
         logout,
       }}
     >
