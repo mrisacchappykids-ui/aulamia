@@ -99,8 +99,16 @@ class ClassroomStorage:
 
     @staticmethod
     def _save_data(file_path: Path, data: Any) -> None:
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        try:
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except (OSError, PermissionError):
+            import tempfile
+            tmp_target = Path(tempfile.gettempdir()) / "aulamia_data" / file_path.name
+            tmp_target.parent.mkdir(parents=True, exist_ok=True)
+            with open(tmp_target, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
 
     @classmethod
     def get_all(cls) -> List[ClassroomProfile]:

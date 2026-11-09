@@ -1,11 +1,40 @@
 import os
 import re
+import tempfile
+import shutil
 from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = BASE_DIR / "data"
-DATA_DIR.mkdir(exist_ok=True)
+
+def resolve_data_dir() -> Path:
+    """
+    Retorna el directorio de datos garantizando permisos de escritura.
+    En entornos serverless (como Vercel o AWS Lambda) donde /var/task es de solo lectura,
+    utiliza el directorio temporal del sistema (/tmp/aulamia_data) inicializado con los
+    archivos JSON base.
+    """
+    base_data = BASE_DIR / "data"
+    test_file = base_data / ".write_test"
+    try:
+        base_data.mkdir(parents=True, exist_ok=True)
+        test_file.touch(exist_ok=True)
+        test_file.unlink(missing_ok=True)
+        return base_data
+    except (OSError, PermissionError):
+        tmp_data = Path(tempfile.gettempdir()) / "aulamia_data"
+        tmp_data.mkdir(parents=True, exist_ok=True)
+        if base_data.exists():
+            for src_file in base_data.glob("*.json"):
+                dest_file = tmp_data / src_file.name
+                if not dest_file.exists():
+                    try:
+                        shutil.copy2(src_file, dest_file)
+                    except Exception as e:
+                        print(f"Warning copying {src_file} to tmp: {e}")
+        return tmp_data
+
+DATA_DIR = resolve_data_dir()
 
 load_dotenv(BASE_DIR / ".env")
 

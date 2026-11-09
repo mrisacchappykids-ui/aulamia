@@ -5,7 +5,8 @@ import os
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pathlib import Path
-from app.core.config import DATA_DIR
+import tempfile
+from app.core.config import DATA_DIR, BASE_DIR
 from app.models.schemas import UserRegisterRequest, UserLoginRequest, UserResponse, AuthResponse
 
 USERS_FILE = DATA_DIR / "users.json"
@@ -45,13 +46,20 @@ def get_default_users() -> List[Dict[str, Any]]:
     ]
 
 def load_users() -> List[Dict[str, Any]]:
-    """Carga los usuarios desde el archivo JSON local."""
-    if not USERS_FILE.exists():
-        defaults = get_default_users()
-        save_users(defaults)
-        return defaults
+    """Carga los usuarios desde el archivo JSON local con soporte para entornos serverless."""
+    global USERS_FILE
+    target_path = USERS_FILE
+    # Si no existe en la ruta actual, revisar si existe en el directorio base
+    if not target_path.exists():
+        fallback_base = BASE_DIR / "data" / "users.json"
+        if fallback_base.exists():
+            target_path = fallback_base
+        else:
+            defaults = get_default_users()
+            save_users(defaults)
+            return defaults
     try:
-        with open(USERS_FILE, "r", encoding="utf-8") as f:
+        with open(target_path, "r", encoding="utf-8") as f:
             content = f.read().strip()
             if not content:
                 defaults = get_default_users()
@@ -59,14 +67,23 @@ def load_users() -> List[Dict[str, Any]]:
                 return defaults
             return json.loads(content)
     except Exception as e:
-        print(f"Error cargando users.json: {e}")
+        print(f"Error cargando users.json desde {target_path}: {e}")
         return get_default_users()
 
 def save_users(users: List[Dict[str, Any]]) -> None:
-    """Guarda los usuarios en el archivo JSON."""
-    DATA_DIR.mkdir(exist_ok=True)
-    with open(USERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(users, f, indent=2, ensure_ascii=False)
+    """Guarda los usuarios en el archivo JSON con tolerancia a entornos de solo lectura (Vercel)."""
+    global USERS_FILE
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, indent=2, ensure_ascii=False)
+    except (OSError, PermissionError) as e:
+        print(f"Aviso: Ruta {USERS_FILE} es de solo lectura ({e}). Guardando en /tmp...")
+        tmp_dir = Path(tempfile.gettempdir()) / "aulamia_data"
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        USERS_FILE = tmp_dir / "users.json"
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, indent=2, ensure_ascii=False)
 
 def register_user(req: UserRegisterRequest) -> Dict[str, Any]:
     """Registra un nuevo docente en AulaMIA."""
