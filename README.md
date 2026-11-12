@@ -35,7 +35,7 @@ El prototipo está construido en dos capas independientes y desacopladas:
 
 2. **Backend en FastAPI (Python 3.13, Pydantic v2, Uvicorn, CORS)**
    - API REST documentada interactivamente con Swagger UI (`/docs`).
-   - Gestión y persistencia en JSON estructurado de perfiles y recursos generados.
+   - Persistencia de cuentas, sesiones, perfiles y recursos en PostgreSQL. En desarrollo, SQLite se activa cuando la URL de PostgreSQL está vacía.
    - Motor de IA pedagógica contextualizada con plantillas DUA y soporte nativo para **Google Gemini** (`GEMINI_API_KEY`).
 
 ---
@@ -66,6 +66,23 @@ cd c:\Users\ijs-b\Documents\aulamia\frontend
 npm run dev
 ```
 - Aplicación web en: `http://localhost:3000`
+
+### Configuración y pruebas
+
+Para instalar las dependencias del backend, crea `backend/.venv` con Python 3.13 y ejecuta `python -m pip install -r requirements.txt` dentro de ese entorno. En `frontend/` ejecuta `npm ci`. Los archivos `.env.example` indican las variables de cada servicio. Para una prueba local con SQLite, define `AULAMIA_USE_SQLITE=1` y apunta `AULAMIA_DATA_DIR` a un directorio de pruebas.
+
+La suite inicia su propia API con una base SQLite temporal, datos ficticios y generación por plantillas. Desde la raíz del repositorio en Windows:
+
+```powershell
+.\backend\.venv\Scripts\python.exe backend/test_api_suite.py
+```
+
+### Despliegue en Vercel
+
+- El proyecto Next.js debe usar `frontend/` como directorio raíz y apuntar con `NEXT_PUBLIC_API_URL` al origen de FastAPI. Si cambia esa variable, vuelve a compilar el frontend.
+- El proyecto FastAPI debe usar `backend/` como directorio raíz y tener `STORAGE_POSTGRES_URL`. Comprueba que `/health/db` responda HTTP 200 con `mode=postgres` antes de promover un despliegue. Agrega orígenes adicionales del frontend en `CORS_ORIGINS`.
+- Para activar Google, configura el mismo ID de cliente en `GOOGLE_CLIENT_ID` del backend y `NEXT_PUBLIC_GOOGLE_CLIENT_ID` del frontend. Registra el origen del frontend en Google Cloud.
+- Verifica que las cuentas anteriores se importen antes de retirar de Git el archivo legado. La importación usa una transacción y conserva los identificadores y hashes existentes. Para importar un respaldo privado desde otra máquina, coloca el respaldo en esa máquina, define `AULAMIA_LEGACY_USERS_FILE` y ejecuta el backend con la conexión a la base de destino. Prueba una cuenta existente antes de cambiar el despliegue.
 
 ---
 

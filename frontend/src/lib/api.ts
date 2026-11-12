@@ -10,37 +10,53 @@ import {
   FeedbackRating,
   UserRegisterData,
   UserLoginData,
-  AuthResponse
+  AuthResponse,
+  User
 } from "@/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL?.trim() ||
+  (process.env.NODE_ENV === "production" ? "https://aulamia-76ay.vercel.app" : "http://localhost:8000")
+).replace(/\/+$/, "");
+
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
 
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = `${API_BASE}${endpoint}`;
+  const headers = new Headers(options?.headers);
+  if (options?.body) headers.set("Content-Type", "application/json");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
   try {
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options?.headers || {}),
-      },
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+      ...options, headers, signal: controller.signal, cache: "no-store",
     });
-
     if (!res.ok) {
-      let errorBody = "";
-      try {
-        const errJson = await res.json();
-        errorBody = errJson.detail || errJson.message || JSON.stringify(errJson);
-      } catch {
-        errorBody = await res.text();
-      }
-      throw new Error(errorBody || `Error en API (${res.status}): ${res.statusText}`);
+      const body = await res.json().catch(() => null);
+      const detail = body?.detail;
+      const message = typeof detail === "string"
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((item) => `${item.loc?.at(-1) ?? "Campo"}: ${item.msg}`).join(". ")
+          : `El servidor de AulaMIA respondió con un error (${res.status}).`;
+      throw new ApiError(message, res.status);
     }
-
+    if (res.status === 204) return undefined as T;
+    if (!res.headers.get("content-type")?.includes("application/json")) {
+      throw new ApiError("La dirección configurada no está devolviendo respuestas de la API de AulaMIA.", res.status);
+    }
     return await res.json();
-  } catch (err: any) {
-    console.error(`API Request failed on ${endpoint}:`, err);
-    throw err;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (controller.signal.aborted) {
+      throw new Error("El servidor tardó demasiado en responder. Intenta de nuevo.");
+    }
+    throw new Error("No pudimos comunicarnos con el servidor de AulaMIA. Revisa tu conexión e intenta de nuevo.");
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -64,13 +80,23 @@ export async function demoLogin(): Promise<AuthResponse> {
   return fetchJson<AuthResponse>("/auth/demo-login");
 }
 
-export async function googleLogin(data: { credential?: string; email?: string; name?: string; picture?: string }): Promise<AuthResponse> {
+export async function googleLogin(credential: string): Promise<AuthResponse> {
   return fetchJson<AuthResponse>("/auth/google", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify({ credential }),
   });
 }
 
+export async function getCurrentUser(token: string): Promise<User> {
+  return fetchJson<User>("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+}
+
+export async function endSession(token: string): Promise<void> {
+  return fetchJson<void>("/auth/logout", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
 
 // ----------------- Classroom Profiles -----------------
 

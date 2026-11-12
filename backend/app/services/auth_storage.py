@@ -1,271 +1,190 @@
-import json
-import uuid
 import hashlib
+import hmac
+import json
 import os
-from datetime import datetime
-from typing import List, Optional, Dict, Any
-from pathlib import Path
-import tempfile
-from app.core.config import DATA_DIR, BASE_DIR
-from app.models.schemas import UserRegisterRequest, UserLoginRequest, UserResponse, AuthResponse, GoogleAuthRequest
+import secrets
+import time
+import uuid
+from datetime import datetime, timezone
 
-USERS_FILE = DATA_DIR / "users.json"
+from sqlalchemy import delete, select
 
-def hash_password(password: str, salt: Optional[str] = None) -> tuple[str, str]:
-    """Genera hash seguro de contraseña usando PBKDF2-HMAC-SHA256."""
-    if not salt:
-        salt = os.urandom(16).hex()
-    pwd_hash = hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        bytes.fromhex(salt),
-        100000
-    ).hex()
-    return pwd_hash, salt
+from app.core.config import DATABASE_URL, GOOGLE_CLIENT_ID, LEGACY_USERS_FILE, SERVERLESS
+from app.core.database import AuthSessionDB, DataImportDB, StorageUnavailable, UserDB, insert_if_absent, storage_session
+from app.models.schemas import GoogleAuthRequest, UserLoginRequest, UserRegisterRequest, UserResponse
 
-def verify_password(password: str, stored_hash: str, salt: str) -> bool:
-    """Verifica si la contraseña ingresada coincide con el hash guardado."""
-    new_hash, _ = hash_password(password, salt)
-    return new_hash == stored_hash
+DEMO_ID = "usr-demo-docente"
+DEMO_EMAIL = "profesor@aulamia.edu.co"
+SESSION_SECONDS = 7 * 24 * 60 * 60
 
-def get_default_users() -> List[Dict[str, Any]]:
-    """Usuario demo precargado para pruebas pedagógicas."""
-    demo_hash, demo_salt = hash_password("docente123")
-    return [
-        {
-            "id": "usr-demo-docente",
-            "name": "Profesor Demo AulaMIA",
-            "email": "profesor@aulamia.edu.co",
-            "password_hash": demo_hash,
-            "salt": demo_salt,
-            "institution": "Colegio San José - Sede Principal",
-            "specialty": "Docente de Primaria y Tecnología",
-            "role": "Docente",
-            "created_at": datetime.now().isoformat()
-        }
-    ]
 
-def load_users() -> List[Dict[str, Any]]:
-    """Carga los usuarios desde el archivo JSON local con soporte para entornos serverless."""
-    global USERS_FILE
-    target_path = USERS_FILE
-    # Si no existe en la ruta actual, revisar si existe en el directorio base
-    if not target_path.exists():
-        fallback_base = BASE_DIR / "data" / "users.json"
-        if fallback_base.exists():
-            target_path = fallback_base
-        else:
-            defaults = get_default_users()
-            save_users(defaults)
-            return defaults
+def _now():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def hash_password(password: str, salt: str | None = None) -> tuple[str, str]:
+    # Preserve the parameters used by earlier accounts during migration.
+    salt = salt or os.urandom(16).hex()
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), bytes.fromhex(salt), 100_000)
+    return digest.hex(), salt
+
+
+def _import_legacy_users(session):
+    if DATABASE_URL and not (SERVERLESS or os.getenv("AULAMIA_LEGACY_USERS_FILE")):
+        return
+    if session.get(DataImportDB, "legacy_users_v1") or not LEGACY_USERS_FILE.is_file():
+        return
+    if not insert_if_absent(session, DataImportDB, {"name": "legacy_users_v1"}):
+        return
     try:
-        with open(target_path, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-            if not content:
-                defaults = get_default_users()
-                save_users(defaults)
-                return defaults
-            return json.loads(content)
-    except Exception as e:
-        print(f"Error cargando users.json desde {target_path}: {e}")
-        return get_default_users()
+        users = json.loads(LEGACY_USERS_FILE.read_text(encoding="utf-8"))
+        for user in users:
+            email = user["email"].strip().lower()
+            if email == DEMO_EMAIL or user["id"] == DEMO_ID:
+                continue
+            profile = {**user, "email": email}
+            data = UserResponse.model_validate(profile).model_dump()
+            data.update(password_hash=user.get("password_hash"), salt=user.get("salt"))
+            insert_if_absent(session, UserDB, data)
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        raise StorageUnavailable("No se pudieron importar las cuentas anteriores de AulaMIA.") from None
 
-def save_users(users: List[Dict[str, Any]]) -> None:
-    """Guarda los usuarios en el archivo JSON con tolerancia a entornos de solo lectura (Vercel)."""
-    global USERS_FILE
-    try:
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        with open(USERS_FILE, "w", encoding="utf-8") as f:
-            json.dump(users, f, indent=2, ensure_ascii=False)
-    except (OSError, PermissionError) as e:
-        print(f"Aviso: Ruta {USERS_FILE} es de solo lectura ({e}). Guardando en /tmp...")
-        tmp_dir = Path(tempfile.gettempdir()) / "aulamia_data"
-        tmp_dir.mkdir(parents=True, exist_ok=True)
-        USERS_FILE = tmp_dir / "users.json"
-        with open(USERS_FILE, "w", encoding="utf-8") as f:
-            json.dump(users, f, indent=2, ensure_ascii=False)
 
-def register_user(req: UserRegisterRequest) -> Dict[str, Any]:
-    """Registra un nuevo docente en AulaMIA."""
-    users = load_users()
-    clean_email = req.email.strip().lower()
+def _public_user(user):
+    return UserResponse.model_validate(user, from_attributes=True)
 
-    # Validar duplicados
-    for u in users:
-        if u.get("email", "").lower() == clean_email:
-            raise ValueError("Este correo electrónico ya se encuentra registrado.")
 
-    pwd_hash, salt = hash_password(req.password)
-    user_id = f"usr-{uuid.uuid4().hex[:12]}"
-    now_str = datetime.now().isoformat()
+def _issue_session(session, user, message):
+    now = int(time.time())
+    session.execute(delete(AuthSessionDB).where(
+        AuthSessionDB.user_id == user.id, AuthSessionDB.expires_at <= now
+    ))
+    token = secrets.token_urlsafe(32)
+    session.add(AuthSessionDB(
+        token_hash=_token_hash(token), user_id=user.id, expires_at=now + SESSION_SECONDS,
+    ))
+    return {"message": message, "token": token, "user": _public_user(user)}
 
-    new_user = {
-        "id": user_id,
+
+def _token_hash(token):
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def register_user(req: UserRegisterRequest):
+    email = req.email.strip().lower()
+    if email == DEMO_EMAIL:
+        raise ValueError("Este correo electrónico está reservado para la demostración.")
+    if len(email) > 254 or "@" not in email or len(req.name.strip()) < 2:
+        raise ValueError("Ingresa un nombre y un correo válidos.")
+    password_hash, salt = hash_password(req.password)
+    data = {
+        "id": f"usr-{uuid.uuid4().hex}",
+        "email": email,
         "name": req.name.strip(),
-        "email": clean_email,
-        "password_hash": pwd_hash,
+        "password_hash": password_hash,
         "salt": salt,
-        "institution": req.institution.strip() if req.institution else "Institución Educativa",
-        "specialty": req.specialty.strip() if req.specialty else "Docente de Aula",
-        "role": req.role.strip() if req.role else "Docente",
-        "created_at": now_str
+        "institution": (req.institution or "").strip() or "Institución Educativa",
+        "specialty": (req.specialty or "").strip() or "Docente de Aula",
+        "role": "Docente",
+        "created_at": _now(),
     }
-
-    users.append(new_user)
-    save_users(users)
-
-    # Token de sesión simulado seguro
-    token = f"aulamia-token-{uuid.uuid4().hex}"
-
-    user_response = {
-        "id": new_user["id"],
-        "name": new_user["name"],
-        "email": new_user["email"],
-        "institution": new_user["institution"],
-        "specialty": new_user["specialty"],
-        "role": new_user["role"],
-        "created_at": new_user["created_at"]
-    }
-
-    return {
-        "message": "Registro completado exitosamente",
-        "token": token,
-        "user": user_response
-    }
-
-def login_user(req: UserLoginRequest) -> Dict[str, Any]:
-    """Inicia sesión validando credenciales."""
-    users = load_users()
-    clean_email = req.email.strip().lower()
-
-    target_user = None
-    for u in users:
-        if u.get("email", "").lower() == clean_email:
-            target_user = u
-            break
-
-    if not target_user:
-        raise ValueError("Correo o contraseña incorrectos. Por favor verifique sus datos.")
-
-    if not verify_password(req.password, target_user["password_hash"], target_user["salt"]):
-        raise ValueError("Correo o contraseña incorrectos. Por favor verifique sus datos.")
-
-    token = f"aulamia-token-{uuid.uuid4().hex}"
-
-    user_response = {
-        "id": target_user["id"],
-        "name": target_user["name"],
-        "email": target_user["email"],
-        "institution": target_user.get("institution", "Institución Educativa"),
-        "specialty": target_user.get("specialty", "Docente de Aula"),
-        "role": target_user.get("role", "Docente"),
-        "created_at": target_user.get("created_at", datetime.now().isoformat())
-    }
-
-    return {
-        "message": "Inicio de sesión exitoso",
-        "token": token,
-        "user": user_response
-    }
-
-def get_demo_user() -> Dict[str, Any]:
-    """Retorna sesión lista para el docente demo."""
-    users = load_users()
-    for u in users:
-        if u.get("email") == "profesor@aulamia.edu.co":
-            return {
-                "message": "Bienvenido como Docente Demo",
-                "token": f"aulamia-demo-{uuid.uuid4().hex}",
-                "user": {
-                    "id": u["id"],
-                    "name": u["name"],
-                    "email": u["email"],
-                    "institution": u.get("institution", "Colegio San José"),
-                    "specialty": u.get("specialty", "Docente de Primaria y Tecnología"),
-                    "role": u.get("role", "Docente"),
-                    "created_at": u.get("created_at", datetime.now().isoformat())
-                }
-            }
-    # Si no existe, crearlo
-    defaults = get_default_users()
-    save_users(defaults)
-    u = defaults[0]
-    return {
-        "message": "Bienvenido como Docente Demo",
-        "token": f"aulamia-demo-{uuid.uuid4().hex}",
-        "user": {
-            "id": u["id"],
-            "name": u["name"],
-            "email": u["email"],
-            "institution": u["institution"],
-            "specialty": u["specialty"],
-            "role": u["role"],
-            "created_at": u["created_at"]
-        }
-    }
+    with storage_session() as session:
+        _import_legacy_users(session)
+        if not insert_if_absent(session, UserDB, data):
+            raise ValueError("Este correo electrónico ya se encuentra registrado.")
+        return _issue_session(session, session.get(UserDB, data["id"]), "Registro completado exitosamente")
 
 
-def authenticate_google_user(req: GoogleAuthRequest) -> Dict[str, Any]:
-    """Autentica o registra un docente usando cuenta de Google."""
-    email = (req.email or "").strip().lower()
-    name = (req.name or "").strip()
+def login_user(req: UserLoginRequest):
+    with storage_session() as session:
+        _import_legacy_users(session)
+        user = session.scalar(select(UserDB).filter_by(email=req.email.strip().lower()))
+        if user and user.password_hash and user.salt:
+            digest, _ = hash_password(req.password, user.salt)
+            if hmac.compare_digest(digest, user.password_hash):
+                return _issue_session(session, user, "Inicio de sesión exitoso")
+        raise ValueError("Correo o contraseña incorrectos. Por favor verifica tus datos.")
 
-    if req.credential and not email:
-        try:
-            import base64
-            parts = req.credential.split(".")
-            if len(parts) >= 2:
-                payload_b64 = parts[1] + "=" * (-len(parts[1]) % 4)
-                payload_json = base64.urlsafe_b64decode(payload_b64).decode("utf-8")
-                payload = json.loads(payload_json)
-                email = payload.get("email", "").strip().lower()
-                name = payload.get("name", "").strip() or payload.get("given_name", "")
-        except Exception as e:
-            print(f"Aviso decodificando Google token: {e}")
 
-    if not email:
-        email = "docente.google@aulamia.edu.co"
-    if not name:
-        name = email.split("@")[0].replace(".", " ").title()
+def get_demo_user():
+    with storage_session() as session:
+        user = session.get(UserDB, DEMO_ID)
+        if not user:
+            insert_if_absent(session, UserDB, {
+                "id": DEMO_ID, "email": DEMO_EMAIL, "name": "Profesor Demo AulaMIA",
+                "institution": "Institución de demostración",
+                "specialty": "Docente de Primaria y Tecnología",
+                "role": "Docente", "created_at": _now(),
+            })
+            user = session.get(UserDB, DEMO_ID)
+        return _issue_session(session, user, "Bienvenido como Docente Demo")
 
-    users = load_users()
-    target_user = None
-    for u in users:
-        if u.get("email", "").lower() == email:
-            target_user = u
-            break
 
-    now_str = datetime.now().isoformat()
-    if not target_user:
-        pwd_hash, salt = hash_password(uuid.uuid4().hex)
-        user_id = f"usr-google-{uuid.uuid4().hex[:8]}"
-        target_user = {
-            "id": user_id,
-            "name": name,
-            "email": email,
-            "password_hash": pwd_hash,
-            "salt": salt,
-            "institution": req.institution or "Instituci?n Educativa (Google Workspace)",
-            "specialty": req.specialty or "Docente de Aula",
-            "role": "Docente",
-            "created_at": now_str
-        }
-        users.append(target_user)
-        save_users(users)
+def current_user(token: str):
+    with storage_session() as session:
+        auth = session.get(AuthSessionDB, _token_hash(token))
+        if auth is None or auth.expires_at <= int(time.time()):
+            return None
+        user = session.get(UserDB, auth.user_id)
+        return _public_user(user) if user else None
 
-    token = f"aulamia-google-{uuid.uuid4().hex}"
-    user_response = {
-        "id": target_user["id"],
-        "name": target_user["name"],
-        "email": target_user["email"],
-        "institution": target_user.get("institution", "Instituci?n Educativa"),
-        "specialty": target_user.get("specialty", "Docente de Aula"),
-        "role": target_user.get("role", "Docente"),
-        "created_at": target_user.get("created_at", now_str)
-    }
 
-    return {
-        "message": "Inicio de sesi?n con Google exitoso",
-        "token": token,
-        "user": user_response
-    }
+def logout_user(token: str):
+    with storage_session() as session:
+        session.execute(delete(AuthSessionDB).where(AuthSessionDB.token_hash == _token_hash(token)))
+
+
+def _google_identity(credential: str):
+    if not GOOGLE_CLIENT_ID:
+        raise StorageUnavailable("El inicio de sesión con Google requiere configuración.")
+    from google.auth.exceptions import GoogleAuthError, TransportError
+    from google.auth.transport.requests import Request
+    from google.oauth2.id_token import verify_oauth2_token
+
+    def request_with_timeout(url, method="GET", **kwargs):
+        kwargs["timeout"] = 5
+        return Request()(url, method=method, **kwargs)
+
+    try:
+        identity = verify_oauth2_token(credential, request_with_timeout, GOOGLE_CLIENT_ID)
+    except TransportError:
+        raise StorageUnavailable("No se pudo conectar con Google. Intenta de nuevo.") from None
+    except (GoogleAuthError, ValueError):
+        raise ValueError("Google no pudo verificar tu sesión.") from None
+    if not (identity.get("sub") and identity.get("email") and identity.get("email_verified") is True):
+        raise ValueError("Tu cuenta de Google debe tener un correo verificado.")
+    return identity
+
+
+def authenticate_google_user(req: GoogleAuthRequest):
+    identity = _google_identity(req.credential)
+    email = identity["email"].strip().lower()
+    subject = identity["sub"]
+    if email == DEMO_EMAIL:
+        raise ValueError("Este correo electrónico está reservado para la demostración.")
+
+    with storage_session() as session:
+        _import_legacy_users(session)
+        user = session.scalar(select(UserDB).filter_by(google_subject=subject))
+        if user:
+            return _issue_session(session, user, "Inicio de sesión con Google exitoso")
+
+        # Serialize linking requests for an existing account.
+        user = session.scalar(select(UserDB).filter_by(email=email).with_for_update())
+        if user:
+            if user.google_subject and user.google_subject != subject:
+                raise ValueError("Esta cuenta está vinculada a otra identidad de Google.")
+            if not (email.endswith("@gmail.com") or identity.get("hd")):
+                raise ValueError("Usa tu contraseña de AulaMIA para acceder a esta cuenta.")
+            user.google_subject = subject
+        else:
+            user_id = f"usr-google-{uuid.uuid4().hex}"
+            if not insert_if_absent(session, UserDB, {
+                "id": user_id, "email": email, "google_subject": subject,
+                "name": identity.get("name") or email.split("@")[0],
+                "institution": "Institución Educativa", "specialty": "Docente de Aula",
+                "role": "Docente", "created_at": _now(),
+            }):
+                raise ValueError("Ya existe una cuenta para ese correo. Vuelve a iniciar sesión.")
+            user = session.get(UserDB, user_id)
+        return _issue_session(session, user, "Inicio de sesión con Google exitoso")

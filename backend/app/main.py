@@ -1,7 +1,9 @@
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.core.config import PROJECT_NAME, VERSION, DESCRIPTION, CORS_ORIGINS
-from app.core.database import get_db_status
+from app.core.database import StorageUnavailable, get_db_status
 from app.routers import classrooms, planner, activities, evaluations, games, adaptations, resources, materials, auth
 
 app = FastAPI(
@@ -15,11 +17,19 @@ app = FastAPI(
 # CORS configuration for Next.js frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all during prototyping
-    allow_credentials=True,
+    allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(StorageUnavailable)
+async def database_unavailable(request, error):
+    return JSONResponse(status_code=503, content={"detail": str(error)})
+
+@app.exception_handler(RequestValidationError)
+async def invalid_request(request, error):
+    details = [{key: item[key] for key in ("loc", "msg", "type")} for item in error.errors()]
+    return JSONResponse(status_code=422, content={"detail": details})
 
 # Register routers
 app.include_router(auth.router)
@@ -48,4 +58,5 @@ def health_check():
 
 @app.get("/health/db")
 def health_db():
-    return get_db_status()
+    state = get_db_status()
+    return JSONResponse(status_code=503 if state["mode"] == "unavailable" else 200, content=state)

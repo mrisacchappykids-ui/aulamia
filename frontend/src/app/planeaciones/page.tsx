@@ -14,29 +14,42 @@ export default function PlaneacionesPage() {
   const [competencies, setCompetencies] = useState("Pensamiento numérico, razonamiento matemático, comunicación asertiva");
   const [generating, setGenerating] = useState(false);
   const [plan, setPlan] = useState<LessonPlan | null>(null);
+  const [loadingClassrooms, setLoadingClassrooms] = useState(true);
+  const [classroomError, setClassroomError] = useState("");
+  const [generateError, setGenerateError] = useState("");
 
-  useEffect(() => {
-    getClassrooms().then((data) => {
+  const loadClassrooms = async () => {
+    setLoadingClassrooms(true);
+    setClassroomError("");
+    try {
+      const data = await getClassrooms();
       setClassrooms(data);
-      if (data.length > 0) setSelectedClassroomId(data[0].id);
-    });
-  }, []);
+      setSelectedClassroomId((id) => data.some((item) => item.id === id) ? id : (data[0]?.id ?? ""));
+    } catch (error) {
+      setClassroomError(error instanceof Error ? error.message : "No se pudieron cargar las aulas.");
+    } finally {
+      setLoadingClassrooms(false);
+    }
+  };
+
+  useEffect(() => { void loadClassrooms(); }, []);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClassroomId) return;
+    setGenerateError("");
     setGenerating(true);
     try {
       const compList = competencies.split(",").map((s) => s.trim()).filter(Boolean);
       const res = await generateLessonPlan({
         classroom_id: selectedClassroomId,
-        topic,
-        learning_objective: objective,
+        topic: topic.trim(),
+        learning_objective: objective.trim(),
         specific_competencies: compList,
       });
       setPlan(res);
-    } catch (err) {
-      alert("Error al generar la planeación");
+    } catch (error) {
+      setGenerateError(error instanceof Error ? error.message : "No se pudo generar la planeación.");
     } finally {
       setGenerating(false);
     }
@@ -52,11 +65,20 @@ export default function PlaneacionesPage() {
     <div className="space-y-8">
       {/* Context Badge */}
       <div className="no-print">
-        <ClassroomContextBadge
-          classrooms={classrooms}
-          selectedId={selectedClassroomId}
-          onSelect={(id) => setSelectedClassroomId(id)}
-        />
+        {loadingClassrooms ? (
+          <p role="status" className="p-4 text-sm text-slate-600">Cargando aulas…</p>
+        ) : classroomError ? (
+          <div role="alert" className="flex items-center gap-3 rounded-xl bg-rose-50 p-4 text-sm text-rose-800">
+            <span>{classroomError}</span>
+            <button type="button" onClick={loadClassrooms} className="ml-auto font-semibold underline">Reintentar</button>
+          </div>
+        ) : (
+          <ClassroomContextBadge
+            classrooms={classrooms}
+            selectedId={selectedClassroomId}
+            onSelect={setSelectedClassroomId}
+          />
+        )}
       </div>
 
       {/* Generator Form */}
@@ -76,6 +98,7 @@ export default function PlaneacionesPage() {
         </div>
 
         <form onSubmit={handleGenerate} className="space-y-4 text-xs">
+          {generateError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-rose-800">{generateError}</p>}
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Tema de la Clase</label>
             <input
@@ -113,7 +136,7 @@ export default function PlaneacionesPage() {
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              disabled={generating}
+              disabled={generating || loadingClassrooms || !!classroomError || !selectedClassroomId}
               className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold shadow-md shadow-brand-500/20 transition"
             >
               <Sparkles className="w-4 h-4" />
