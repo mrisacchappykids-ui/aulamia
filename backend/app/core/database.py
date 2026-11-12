@@ -99,6 +99,7 @@ def init_database():
                 pool_recycle=300,
                 pool_size=5,
                 max_overflow=10,
+                connect_args={"connect_timeout": 3}
             )
             # Test connection
             with pg_engine.connect() as conn:

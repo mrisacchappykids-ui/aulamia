@@ -20,5 +20,16 @@
     "specialty": "todas",
     "role": "Docente",
     "created_at": "2026-10-26T18:27:32.778047"
+  },
+  {
+    "id": "usr-a4b31b23f3ec",
+    "name": "Docente Test Auto",
+    "email": "test_auto_aula-2abf3931@aulamia.edu",
+    "password_hash": "6638e7faa4ba4eaae66d3ba7739cc1fd2f55c33bef088b9a25f1b78de0ad7662",
+    "salt": "18576c1815dbeeb244d7ce4b31abef35",
+    "institution": "Colegio Nacional",
+    "specialty": "Primaria",
+    "role": "Docente",
+    "created_at": "2026-11-12T02:06:14.469327"
   }
 ]
