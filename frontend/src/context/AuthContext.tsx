@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User, UserLoginData, UserRegisterData } from "@/types";
-import { loginUser, registerUser, demoLogin, googleLogin } from "@/lib/api";
+import { ApiError, loginUser, registerUser, demoLogin, googleLogin, getCurrentUser, endSession } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
@@ -16,7 +16,7 @@ interface AuthContextType {
   login: (data: UserLoginData) => Promise<void>;
   register: (data: UserRegisterData) => Promise<void>;
   loginAsDemo: () => Promise<void>;
-  loginWithGoogle: (data?: { credential?: string; email?: string; name?: string }) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -29,27 +29,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalTab, setAuthModalTab] = useState<"login" | "register">("login");
 
-  // Restore session from localStorage on mount
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("aulamia_user");
-      const storedToken = localStorage.getItem("aulamia_token");
-      if (storedUser && storedToken) {
-        setUser(JSON.parse(storedUser));
-        setToken(storedToken);
+    let active = true;
+    async function restoreSession() {
+      let storedToken: string | null = null;
+      try {
+        localStorage.removeItem("aulamia_user");
+        storedToken = localStorage.getItem("aulamia_token");
+        if (!storedToken) return;
+        const restoredUser = await getCurrentUser(storedToken);
+        if (active && localStorage.getItem("aulamia_token") === storedToken) {
+          setUser(restoredUser);
+          setToken(storedToken);
+        }
+      } catch (error) {
+        if (active && error instanceof ApiError && error.status === 401 &&
+            localStorage.getItem("aulamia_token") === storedToken) {
+          localStorage.removeItem("aulamia_token");
+        }
+      } finally {
+        if (active) setIsLoading(false);
       }
-    } catch (e) {
-      console.error("Error al restaurar sesión guardada:", e);
-    } finally {
-      setIsLoading(false);
     }
+    void restoreSession();
+    return () => { active = false; };
   }, []);
 
   const saveSession = (newUser: User, newToken: string) => {
     setUser(newUser);
     setToken(newToken);
     try {
-      localStorage.setItem("aulamia_user", JSON.stringify(newUser));
       localStorage.setItem("aulamia_token", newToken);
     } catch (e) {
       console.error("Error al guardar sesión en localStorage:", e);
@@ -89,10 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const loginWithGoogle = async (data?: { credential?: string; email?: string; name?: string }) => {
+  const loginWithGoogle = async (credential: string) => {
     setIsLoading(true);
     try {
-      const res = await googleLogin(data || {});
+      const res = await googleLogin(credential);
       saveSession(res.user, res.token);
       setIsAuthModalOpen(false);
     } finally {
@@ -101,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    if (token) void endSession(token).catch(() => {});
     setUser(null);
     setToken(null);
     try {

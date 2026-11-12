@@ -1,10 +1,10 @@
-import os
 import json
+import logging
 import uuid
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 import requests
-from app.core.config import GEMINI_API_KEY
+from app.core.config import GEMINI_API_KEY, GEMINI_MODEL
 from app.models.schemas import (
     ClassroomProfile,
     LessonPlan,
@@ -21,14 +21,16 @@ from app.models.schemas import (
     MaterialSection
 )
 
+logger = logging.getLogger(__name__)
+
 class AIGeneratorService:
     @staticmethod
     def _call_gemini_if_available(prompt: str, system_instruction: str) -> Optional[str]:
         if not GEMINI_API_KEY:
             return None
         try:
-            # Using Gemini 1.5 or 2.0 API endpoint
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+            model = GEMINI_MODEL.removeprefix("models/")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
             payload = {
                 "system_instruction": {"parts": [{"text": system_instruction}]},
                 "contents": [{"parts": [{"text": prompt}]}],
@@ -37,13 +39,16 @@ class AIGeneratorService:
                     "temperature": 0.4
                 }
             }
-            resp = requests.post(url, json=payload, timeout=20)
+            resp = requests.post(
+                url, headers={"x-goog-api-key": GEMINI_API_KEY}, json=payload, timeout=(3, 12)
+            )
             if resp.status_code == 200:
                 result = resp.json()
                 text = result["candidates"][0]["content"]["parts"][0]["text"]
                 return text
-        except Exception:
-            pass
+            logger.warning("Gemini returned HTTP %s; using a template", resp.status_code)
+        except (requests.RequestException, ValueError, KeyError, IndexError, TypeError) as error:
+            logger.warning("Gemini response unavailable (%s); using a template", type(error).__name__)
         return None
 
     @classmethod

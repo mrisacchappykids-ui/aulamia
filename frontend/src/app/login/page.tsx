@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { 
   Sparkles, 
@@ -14,14 +15,22 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+type GoogleSignIn = {
+  initialize: (options: { client_id: string; callback: (response: { credential: string }) => void }) => void;
+  renderButton: (target: HTMLElement, options: { theme: string; size: string; locale: string }) => void;
+};
+
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loginAsDemo, user } = useAuth();
+  const { login, loginAsDemo, loginWithGoogle, user, isLoading } = useAuth();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const googleButton = useRef<HTMLDivElement>(null);
 
   // If already logged in, show status
   if (user) {
@@ -77,6 +86,28 @@ export default function LoginPage() {
     }
   };
 
+  const renderGoogleButton = () => {
+    const identity = (window as Window & { google?: { accounts?: { id: GoogleSignIn } } }).google?.accounts?.id;
+    if (!GOOGLE_CLIENT_ID || !googleButton.current || !identity) return;
+    identity.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: async ({ credential }) => {
+        setError(null);
+        setLoading(true);
+        try {
+          await loginWithGoogle(credential);
+          router.push("/");
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "Error al iniciar sesión con Google.");
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+    googleButton.current.replaceChildren();
+    identity.renderButton(googleButton.current, { theme: "outline", size: "large", locale: "es" });
+  };
+
   return (
     <div className="max-w-md mx-auto my-8">
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden">
@@ -100,7 +131,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleDemo}
-              disabled={loading}
+              disabled={loading || isLoading}
               className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 border-emerald-500/30 bg-emerald-50 hover:bg-emerald-100/70 text-emerald-800 text-xs font-semibold transition-all group shadow-sm disabled:opacity-50"
             >
               <div className="flex items-center gap-2.5">
@@ -162,12 +193,24 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isLoading}
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white text-sm font-semibold shadow-md shadow-brand-500/25 transition-all disabled:opacity-50"
             >
               {loading ? "Iniciando sesión..." : "Ingresar"}
             </button>
           </form>
+
+          {GOOGLE_CLIENT_ID && (
+            <div className="mt-4 flex justify-center" aria-busy={loading || isLoading}>
+              <div ref={googleButton} />
+              <Script
+                src="https://accounts.google.com/gsi/client"
+                strategy="afterInteractive"
+                onReady={renderGoogleButton}
+                onError={() => setError("No se pudo cargar el acceso con Google. Puedes usar correo y contraseña.")}
+              />
+            </div>
+          )}
 
           <div className="mt-6 text-center text-xs text-slate-500">
             ¿Aún no tienes cuenta?{" "}

@@ -233,7 +233,7 @@ export default function Dashboard() {
             </div>
           </div>
           <p className="text-2xl font-black text-slate-900 mt-2">
-            {stats ? stats.total_resources_generated : 3}
+            {stats?.total_resources_generated ?? "—"}
           </p>
           <p className="text-[11px] text-slate-400 mt-1">Materiales y propuestas pedagógicas</p>
         </div>
@@ -246,7 +246,7 @@ export default function Dashboard() {
             </div>
           </div>
           <p className="text-2xl font-black text-slate-900 mt-2">
-            {stats ? `${stats.estimated_hours_saved}h` : "4.5h"}
+            {stats ? `${stats.estimated_hours_saved}h` : "—"}
           </p>
           <p className="text-[11px] text-slate-400 mt-1">Tiempo docente optimizado</p>
         </div>
@@ -259,7 +259,9 @@ export default function Dashboard() {
             </div>
           </div>
           <p className="text-2xl font-black text-slate-900 mt-2">
-            {stats && stats.average_pedagogical_rating ? stats.average_pedagogical_rating.toFixed(1) : "4.9"} / 5
+            {stats?.feedback_responses_count && typeof stats.average_pedagogical_rating === "number"
+              ? `${stats.average_pedagogical_rating.toFixed(1)} / 5`
+              : "—"}
           </p>
           <p className="text-[11px] text-slate-400 mt-1">Relevancia y pertinencia DUA</p>
         </div>

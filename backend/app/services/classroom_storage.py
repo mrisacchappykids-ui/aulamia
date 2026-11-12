@@ -2,14 +2,16 @@ import json
 import uuid
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from pathlib import Path
-from app.core.config import DATA_DIR, SEED_DATA_DIR
-from app.models.schemas import ClassroomProfile, ClassroomProfileBase
-from app.core.database import SessionLocal, ClassroomDB, ResourceDB, FeedbackDB
 
-CLASSROOMS_FILE = DATA_DIR / "classrooms.json"
-RESOURCES_FILE = DATA_DIR / "resources.json"
-FEEDBACKS_FILE = DATA_DIR / "feedbacks.json"
+from sqlalchemy import func, select
+
+from app.core.config import DATABASE_URL, DATA_DIR, SEED_DATA_DIR, SERVERLESS
+from app.core.database import (
+    ClassroomDB, DataImportDB, FeedbackDB, ResourceDB, StorageUnavailable,
+    insert_if_absent, storage_session,
+)
+from app.models.schemas import ClassroomProfile, ClassroomProfileBase
+
 
 DEFAULT_CLASSROOMS = [
     {
@@ -86,359 +88,154 @@ DEFAULT_CLASSROOMS = [
 ]
 
 class ClassroomStorage:
-    _memory_cache: Dict[str, Any] = {}
+    @staticmethod
+    def _initialize(session) -> None:
+        if session.get(DataImportDB, "pedagogical_data_v1"):
+            return
+        if not insert_if_absent(session, DataImportDB, {"name": "pedagogical_data_v1"}):
+            return
 
-    @classmethod
-    def _seed_db_if_empty(cls, db) -> None:
-        try:
-            count = db.query(ClassroomDB).count()
-            if count == 0:
-                for d in DEFAULT_CLASSROOMS:
-                    item = ClassroomDB(
-                        id=d["id"],
-                        name=d["name"],
-                        grade=d["grade"],
-                        subject=d["subject"],
-                        student_count=d["student_count"],
-                        average_age=d["average_age"],
-                        session_duration_minutes=d["session_duration_minutes"],
-                        methodology=d["methodology"],
-                        available_resources=d["available_resources"],
-                        general_learning_pace=d["general_learning_pace"],
-                        inclusion_support_needs=d["inclusion_support_needs"],
-                        notes=d.get("notes"),
-                        created_at=d["created_at"],
-                    )
-                    db.add(item)
-                db.commit()
-        except Exception as e:
-            print(f"Error seeding database defaults: {e}")
-            db.rollback()
+        # Import data shipped with the deployment, or files beside a local SQLite database.
+        # A local connection to remote PostgreSQL must not copy local files to that database.
+        legacy_dir = SEED_DATA_DIR if SERVERLESS else DATA_DIR if not DATABASE_URL else None
+        profiles = _read_legacy(legacy_dir / "classrooms.json") if legacy_dir else []
+        if not profiles and not session.scalar(select(ClassroomDB.id).limit(1)):
+            profiles = DEFAULT_CLASSROOMS
+        for profile in profiles:
+            validated = ClassroomProfile.model_validate(profile)
+            insert_if_absent(session, ClassroomDB, validated.model_dump())
 
-    @classmethod
-    def _load_data(cls, file_path: Path, default_data: Any) -> Any:
-        cache_key = file_path.name
-        if cache_key in cls._memory_cache:
-            return cls._memory_cache[cache_key]
-
-        if not file_path.exists():
-            seed_file = SEED_DATA_DIR / file_path.name
-            if seed_file.exists():
-                try:
-                    with open(seed_file, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    cls._save_data(file_path, data)
-                    cls._memory_cache[cache_key] = data
-                    return data
-                except Exception:
-                    pass
-            cls._save_data(file_path, default_data)
-            cls._memory_cache[cache_key] = default_data
-            return default_data
-
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                cls._memory_cache[cache_key] = data
-                return data
-        except Exception:
-            return cls._memory_cache.get(cache_key, default_data)
-
-    @classmethod
-    def _save_data(cls, file_path: Path, data: Any) -> None:
-        cache_key = file_path.name
-        cls._memory_cache[cache_key] = data
-        try:
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"File save warning (using memory cache): {e}")
-            try:
-                import tempfile
-                tmp_target = Path(tempfile.gettempdir()) / "aulamia_data" / file_path.name
-                tmp_target.parent.mkdir(parents=True, exist_ok=True)
-                with open(tmp_target, "w", encoding="utf-8") as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
+        if legacy_dir:
+            for resource in _read_legacy(legacy_dir / "resources.json"):
+                if resource.get("id") and resource.get("resource_type"):
+                    insert_if_absent(session, ResourceDB, _resource_values(
+                        resource["resource_type"], resource
+                    ))
+            if not session.scalar(select(FeedbackDB.id).limit(1)):
+                for feedback in _read_legacy(legacy_dir / "feedbacks.json"):
+                    session.add(FeedbackDB(**_feedback_values(feedback)))
 
     @classmethod
     def get_all(cls) -> List[ClassroomProfile]:
-        if SessionLocal:
-            db = SessionLocal()
-            try:
-                cls._seed_db_if_empty(db)
-                records = db.query(ClassroomDB).order_by(ClassroomDB.created_at.desc()).all()
-                if records:
-                    return [ClassroomProfile(**r.to_dict()) for r in records]
-            except Exception as e:
-                print(f"Database query error (falling back to cache): {e}")
-                db.rollback()
-            finally:
-                db.close()
-
-        data = cls._load_data(CLASSROOMS_FILE, DEFAULT_CLASSROOMS)
-        return [ClassroomProfile(**item) for item in data]
+        with storage_session() as session:
+            cls._initialize(session)
+            records = session.scalars(select(ClassroomDB).order_by(ClassroomDB.created_at.desc()))
+            return [ClassroomProfile(**record.to_dict()) for record in records]
 
     @classmethod
     def get_by_id(cls, classroom_id: str) -> Optional[ClassroomProfile]:
-        if SessionLocal:
-            db = SessionLocal()
-            try:
-                record = db.query(ClassroomDB).filter_by(id=classroom_id).first()
-                if record:
-                    return ClassroomProfile(**record.to_dict())
-            except Exception as e:
-                print(f"Database error in get_by_id: {e}")
-            finally:
-                db.close()
-
-        classrooms = cls.get_all()
-        for c in classrooms:
-            if c.id == classroom_id:
-                return c
-        return None
+        with storage_session() as session:
+            cls._initialize(session)
+            record = session.get(ClassroomDB, classroom_id)
+            return ClassroomProfile(**record.to_dict()) if record else None
 
     @classmethod
     def create(cls, profile: ClassroomProfileBase) -> ClassroomProfile:
-        new_id = f"aula-{uuid.uuid4().hex[:8]}"
-        created_time = datetime.now().isoformat()
-
-        if SessionLocal:
-            db = SessionLocal()
-            try:
-                cls._seed_db_if_empty(db)
-                record = ClassroomDB(
-                    id=new_id,
-                    created_at=created_time,
-                    name=profile.name,
-                    grade=profile.grade,
-                    subject=profile.subject,
-                    student_count=profile.student_count,
-                    average_age=profile.average_age,
-                    session_duration_minutes=profile.session_duration_minutes,
-                    methodology=profile.methodology,
-                    available_resources=profile.available_resources,
-                    general_learning_pace=profile.general_learning_pace,
-                    inclusion_support_needs=profile.inclusion_support_needs,
-                    notes=profile.notes or "",
-                )
-                db.add(record)
-                db.commit()
-                return ClassroomProfile(**record.to_dict())
-            except Exception as e:
-                print(f"Database error in create: {e}")
-                db.rollback()
-            finally:
-                db.close()
-
-        classrooms = cls.get_all()
-        new_profile = ClassroomProfile(
-            id=new_id,
-            created_at=created_time,
-            **profile.model_dump()
+        values = profile.model_dump()
+        values["notes"] = profile.notes or ""
+        item = ClassroomProfile(
+            id=f"aula-{uuid.uuid4().hex[:8]}",
+            created_at=datetime.now().isoformat(),
+            **values,
         )
-        classrooms.insert(0, new_profile)
-        cls._save_data(CLASSROOMS_FILE, [c.model_dump() for c in classrooms])
-        return new_profile
+        with storage_session() as session:
+            cls._initialize(session)
+            session.add(ClassroomDB(**item.model_dump()))
+        return item
 
     @classmethod
     def update(cls, classroom_id: str, profile: ClassroomProfileBase) -> Optional[ClassroomProfile]:
-        if SessionLocal:
-            db = SessionLocal()
-            try:
-                record = db.query(ClassroomDB).filter_by(id=classroom_id).first()
-                if record:
-                    record.name = profile.name
-                    record.grade = profile.grade
-                    record.subject = profile.subject
-                    record.student_count = profile.student_count
-                    record.average_age = profile.average_age
-                    record.session_duration_minutes = profile.session_duration_minutes
-                    record.methodology = profile.methodology
-                    record.available_resources = profile.available_resources
-                    record.general_learning_pace = profile.general_learning_pace
-                    record.inclusion_support_needs = profile.inclusion_support_needs
-                    record.notes = profile.notes or ""
-                    db.commit()
-                    return ClassroomProfile(**record.to_dict())
-            except Exception as e:
-                print(f"Database error in update: {e}")
-                db.rollback()
-            finally:
-                db.close()
-
-        classrooms = cls.get_all()
-        for idx, c in enumerate(classrooms):
-            if c.id == classroom_id:
-                updated = ClassroomProfile(
-                    id=classroom_id,
-                    created_at=c.created_at,
-                    **profile.model_dump()
-                )
-                classrooms[idx] = updated
-                cls._save_data(CLASSROOMS_FILE, [item.model_dump() for item in classrooms])
-                return updated
-        return None
+        with storage_session() as session:
+            cls._initialize(session)
+            record = session.get(ClassroomDB, classroom_id)
+            if record is None:
+                return None
+            for key, value in profile.model_dump().items():
+                setattr(record, key, value)
+            return ClassroomProfile(**record.to_dict())
 
     @classmethod
     def delete(cls, classroom_id: str) -> bool:
-        if SessionLocal:
-            db = SessionLocal()
-            try:
-                record = db.query(ClassroomDB).filter_by(id=classroom_id).first()
-                if record:
-                    db.delete(record)
-                    db.commit()
-                    return True
-            except Exception as e:
-                print(f"Database error in delete: {e}")
-                db.rollback()
-            finally:
-                db.close()
-
-        classrooms = cls.get_all()
-        initial_len = len(classrooms)
-        filtered = [c for c in classrooms if c.id != classroom_id]
-        if len(filtered) < initial_len:
-            cls._save_data(CLASSROOMS_FILE, [item.model_dump() for item in filtered])
+        with storage_session() as session:
+            cls._initialize(session)
+            record = session.get(ClassroomDB, classroom_id)
+            if record is None:
+                return False
+            session.delete(record)
             return True
-        return False
 
     @classmethod
     def save_resource(cls, resource_type: str, resource_data: Dict[str, Any]) -> None:
-        saved_time = datetime.now().isoformat()
-        res_id = resource_data.get("id") or f"res-{uuid.uuid4().hex[:8]}"
-
-        if SessionLocal:
-            db = SessionLocal()
-            try:
-                rec = ResourceDB(
-                    id=res_id,
-                    resource_type=resource_type,
-                    classroom_id=resource_data.get("classroom_id"),
-                    topic=resource_data.get("topic"),
-                    title=resource_data.get("title") or resource_data.get("game_title") or resource_data.get("adapted_title"),
-                    data=resource_data,
-                    saved_at=saved_time,
-                )
-                db.merge(rec)
-                db.commit()
-                return
-            except Exception as e:
-                print(f"Database error in save_resource: {e}")
-                db.rollback()
-            finally:
-                db.close()
-
-        resources = cls._load_data(RESOURCES_FILE, [])
-        resource_data["resource_type"] = resource_type
-        resource_data["saved_at"] = saved_time
-        resources.insert(0, resource_data)
-        cls._save_data(RESOURCES_FILE, resources)
+        with storage_session() as session:
+            cls._initialize(session)
+            session.merge(ResourceDB(**_resource_values(resource_type, resource_data)))
 
     @classmethod
     def get_resources(cls, resource_type: Optional[str] = None) -> List[Dict[str, Any]]:
-        if SessionLocal:
-            db = SessionLocal()
-            try:
-                q = db.query(ResourceDB)
-                if resource_type:
-                    q = q.filter_by(resource_type=resource_type)
-                records = q.order_by(ResourceDB.saved_at.desc()).all()
-                if records:
-                    return [r.to_dict() for r in records]
-            except Exception as e:
-                print(f"Database error in get_resources: {e}")
-            finally:
-                db.close()
-
-        resources = cls._load_data(RESOURCES_FILE, [])
-        if resource_type:
-            return [r for r in resources if r.get("resource_type") == resource_type]
-        return resources
+        with storage_session() as session:
+            cls._initialize(session)
+            query = select(ResourceDB).order_by(ResourceDB.saved_at.desc())
+            if resource_type:
+                query = query.filter_by(resource_type=resource_type)
+            return [record.to_dict() for record in session.scalars(query)]
 
     @classmethod
     def delete_resource(cls, resource_id: str) -> bool:
-        if SessionLocal:
-            db = SessionLocal()
-            try:
-                rec = db.query(ResourceDB).filter_by(id=resource_id).first()
-                if rec:
-                    db.delete(rec)
-                    db.commit()
-                    return True
-            except Exception as e:
-                print(f"Database error in delete_resource: {e}")
-                db.rollback()
-            finally:
-                db.close()
-
-        resources = cls._load_data(RESOURCES_FILE, [])
-        initial_len = len(resources)
-        filtered = [r for r in resources if r.get("id") != resource_id]
-        if len(filtered) < initial_len:
-            cls._save_data(RESOURCES_FILE, filtered)
+        with storage_session() as session:
+            cls._initialize(session)
+            record = session.get(ResourceDB, resource_id)
+            if record is None:
+                return False
+            session.delete(record)
             return True
-        return False
 
     @classmethod
-    def record_feedback(cls, feedback_data: Dict[str, Any]) -> bool:
-        created_time = datetime.now().isoformat()
-
-        if SessionLocal:
-            db = SessionLocal()
-            try:
-                fb = FeedbackDB(
-                    resource_id=feedback_data["resource_id"],
-                    stars=feedback_data.get("stars", 5),
-                    relevance_rating=feedback_data.get("relevance_rating", 5),
-                    estimated_minutes_saved=feedback_data.get("estimated_minutes_saved", 60),
-                    qualitative_comment=feedback_data.get("qualitative_comment"),
-                    created_at=created_time,
-                )
-                db.add(fb)
-                db.commit()
-                return True
-            except Exception as e:
-                print(f"Database error in record_feedback: {e}")
-                db.rollback()
-            finally:
-                db.close()
-
-        feedbacks = cls._load_data(FEEDBACKS_FILE, [])
-        feedback_data["created_at"] = created_time
-        feedbacks.insert(0, feedback_data)
-        cls._save_data(FEEDBACKS_FILE, feedbacks)
-        return True
+    def record_feedback(cls, feedback_data: Dict[str, Any]) -> None:
+        with storage_session() as session:
+            cls._initialize(session)
+            session.add(FeedbackDB(**_feedback_values(feedback_data)))
 
     @classmethod
     def get_feedback_stats(cls) -> Dict[str, Any]:
-        if SessionLocal:
-            db = SessionLocal()
-            try:
-                records = db.query(FeedbackDB).all()
-                if records:
-                    avg_stars = sum(r.stars for r in records) / len(records)
-                    total_mins = sum(r.estimated_minutes_saved for r in records)
-                    return {
-                        "average_stars": round(avg_stars, 1),
-                        "feedback_count": len(records),
-                        "total_minutes_saved": total_mins
-                    }
-            except Exception as e:
-                print(f"Database error in get_feedback_stats: {e}")
-            finally:
-                db.close()
+        with storage_session() as session:
+            cls._initialize(session)
+            count, average, minutes = session.execute(
+                select(func.count(FeedbackDB.id), func.avg(FeedbackDB.stars), func.sum(FeedbackDB.estimated_minutes_saved))
+            ).one()
+            return {
+                "average_stars": round(float(average or 0), 1),
+                "feedback_count": count,
+                "total_minutes_saved": minutes or 0,
+            }
 
-        feedbacks = cls._load_data(FEEDBACKS_FILE, [])
-        if not feedbacks:
-            return {"average_stars": 4.9, "feedback_count": 0, "total_minutes_saved": 0}
-        avg_stars = sum(f.get("stars", 5) for f in feedbacks) / len(feedbacks)
-        total_mins = sum(f.get("estimated_minutes_saved", 60) for f in feedbacks)
-        return {
-            "average_stars": round(avg_stars, 1),
-            "feedback_count": len(feedbacks),
-            "total_minutes_saved": total_mins
-        }
+
+def _read_legacy(path):
+    if not path.is_file():
+        return []
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        raise StorageUnavailable("No se pudieron leer los datos anteriores de AulaMIA.") from None
+
+
+def _resource_values(resource_type, data):
+    return {
+        "id": data.get("id") or f"res-{uuid.uuid4().hex[:8]}",
+        "resource_type": resource_type,
+        "classroom_id": data.get("classroom_id"),
+        "topic": data.get("topic"),
+        "title": data.get("title") or data.get("game_title") or data.get("adapted_title"),
+        "data": data,
+        "saved_at": data.get("saved_at") or datetime.now().isoformat(),
+    }
+
+
+def _feedback_values(data):
+    return {
+        "resource_id": data["resource_id"],
+        "stars": data.get("stars", 5),
+        "relevance_rating": data.get("relevance_rating", 5),
+        "estimated_minutes_saved": data.get("estimated_minutes_saved", 60),
+        "qualitative_comment": data.get("qualitative_comment"),
+        "created_at": data.get("created_at") or datetime.now().isoformat(),
+    }

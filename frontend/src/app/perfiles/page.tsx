@@ -9,6 +9,8 @@ export default function PerfilesPage() {
   const [classrooms, setClassrooms] = useState<ClassroomProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [listError, setListError] = useState("");
+  const [formError, setFormError] = useState("");
 
   // Form state
   const [name, setName] = useState("");
@@ -27,10 +29,11 @@ export default function PerfilesPage() {
   const fetchProfiles = async () => {
     try {
       setLoading(true);
+      setListError("");
       const data = await getClassrooms();
       setClassrooms(data);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      setListError(error instanceof Error ? error.message : "No se pudieron cargar los perfiles.");
     } finally {
       setLoading(false);
     }
@@ -42,15 +45,16 @@ export default function PerfilesPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
     setSaving(true);
     try {
       const resourcesList = resourcesInput.split(",").map((s) => s.trim()).filter(Boolean);
       const inclusionList = inclusionNeedsInput.split(",").map((s) => s.trim()).filter(Boolean);
 
-      await createClassroom({
-        name,
-        grade,
-        subject,
+      const profile = await createClassroom({
+        name: name.trim(),
+        grade: grade.trim(),
+        subject: subject.trim(),
         student_count: Number(studentCount),
         average_age: Number(averageAge),
         session_duration_minutes: Number(sessionDuration),
@@ -61,14 +65,13 @@ export default function PerfilesPage() {
         notes,
       });
 
+      setClassrooms((current) => [profile, ...current.filter((item) => item.id !== profile.id)]);
       setShowModal(false);
       // Reset form
       setName("");
-      notes && setNotes("");
-      fetchProfiles();
-    } catch (err: any) {
-      console.error("Error creating classroom profile:", err);
-      alert(`Error al guardar el perfil del aula: ${err?.message || "Verifique la conexión con el servidor"}`);
+      setNotes("");
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "No se pudo guardar el perfil del aula.");
     } finally {
       setSaving(false);
     }
@@ -76,8 +79,13 @@ export default function PerfilesPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm("¿Estás seguro de eliminar este perfil de aula?")) {
-      await deleteClassroom(id);
-      fetchProfiles();
+      setListError("");
+      try {
+        await deleteClassroom(id);
+        setClassrooms((current) => current.filter((item) => item.id !== id));
+      } catch (error) {
+        setListError(error instanceof Error ? error.message : "No se pudo eliminar el perfil.");
+      }
     }
   };
 
@@ -96,7 +104,8 @@ export default function PerfilesPage() {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => { setFormError(""); setShowModal(true); }}
+          disabled={loading}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-sm transition"
         >
           <Plus className="w-4 h-4" />
@@ -113,6 +122,13 @@ export default function PerfilesPage() {
       </div>
 
       {/* List of Classrooms */}
+      {listError && (
+        <div role="alert" className="flex items-center gap-3 rounded-xl bg-rose-50 p-4 text-sm text-rose-800">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{listError}</span>
+          <button type="button" onClick={fetchProfiles} className="ml-auto font-semibold underline">Actualizar lista</button>
+        </div>
+      )}
       {loading ? (
         <div className="text-center py-12 text-xs text-slate-400">Cargando perfiles...</div>
       ) : (
@@ -202,6 +218,7 @@ export default function PerfilesPage() {
             </p>
 
             <form onSubmit={handleCreate} className="space-y-4 text-xs">
+              {formError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-rose-800">{formError}</p>}
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Nombre del Aula o Grupo</label>
                 <input

@@ -1,10 +1,20 @@
 import json
-from typing import Optional, Dict, Any
-from sqlalchemy import create_engine, Column, String, Integer, Text, JSON
-from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session
-from app.core.config import DATABASE_URL, DATA_DIR
+import logging
+from contextlib import contextmanager
+from threading import Lock
+
+from sqlalchemy import create_engine, Column, String, Integer, Text, JSON, select
+from sqlalchemy.engine import URL
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.schema import CreateSchema
+from app.core.config import DATABASE_URL, DATA_DIR, SERVERLESS
 
 Base = declarative_base()
+logger = logging.getLogger(__name__)
+PRIVATE_SCHEMA = "aulamia_private"
 
 class ClassroomDB(Base):
     __tablename__ = "classrooms"
@@ -52,7 +62,7 @@ class ResourceDB(Base):
     saved_at = Column(String(64), nullable=False)
 
     def to_dict(self):
-        item_data = self.data if isinstance(self.data, dict) else json.loads(self.data or "{}")
+        item_data = dict(self.data) if isinstance(self.data, dict) else json.loads(self.data or "{}")
         item_data["id"] = self.id
         item_data["resource_type"] = self.resource_type
         item_data["saved_at"] = self.saved_at
@@ -80,81 +90,107 @@ class FeedbackDB(Base):
             "created_at": self.created_at,
         }
 
+class UserDB(Base):
+    __tablename__ = "aulamia_users"
+    __table_args__ = {"schema": PRIVATE_SCHEMA}
+
+    id = Column(String(64), primary_key=True)
+    email = Column(String(254), unique=True, nullable=False)
+    name = Column(Text, nullable=False)
+    password_hash = Column(String(64), nullable=True)
+    salt = Column(String(64), nullable=True)
+    google_subject = Column(String(255), unique=True, nullable=True)
+    institution = Column(Text, nullable=False)
+    specialty = Column(Text, nullable=False)
+    role = Column(String(64), nullable=False)
+    created_at = Column(String(64), nullable=False)
+
+
+class AuthSessionDB(Base):
+    __tablename__ = "aulamia_sessions"
+    __table_args__ = {"schema": PRIVATE_SCHEMA}
+
+    token_hash = Column(String(64), primary_key=True)
+    user_id = Column(String(64), index=True, nullable=False)
+    expires_at = Column(Integer, index=True, nullable=False)
+
+
+class DataImportDB(Base):
+    __tablename__ = "aulamia_data_imports"
+    __table_args__ = {"schema": PRIVATE_SCHEMA}
+
+    name = Column(String(64), primary_key=True)
+
+
+class StorageUnavailable(Exception):
+    pass
+
+
 engine = None
 SessionLocal = None
-_db_status = {
-    "mode": "uninitialized",
-    "postgres_connected": False,
-    "error": None
-}
+_init_lock = Lock()
 
-def init_database():
-    global engine, SessionLocal, _db_status
 
-    if DATABASE_URL:
-        try:
-            pg_engine = create_engine(
-                DATABASE_URL,
-                pool_pre_ping=True,
-                pool_recycle=300,
-                pool_size=5,
-                max_overflow=10,
-                connect_args={"connect_timeout": 3}
+def get_session_factory():
+    global engine, SessionLocal
+
+    with _init_lock:
+        if SessionLocal is not None:
+            return SessionLocal
+        if SERVERLESS and not DATABASE_URL:
+            raise StorageUnavailable("Configura la conexión a PostgreSQL del backend.")
+
+        if DATABASE_URL:
+            candidate = create_engine(
+                DATABASE_URL, pool_pre_ping=True, pool_recycle=300,
+                pool_size=2, max_overflow=2, pool_timeout=5, hide_parameters=True,
+                connect_args={"connect_timeout": 3},
             )
-            # Test connection
-            with pg_engine.connect() as conn:
-                pass
+        else:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            candidate = create_engine(
+                URL.create("sqlite", database=str(DATA_DIR / "aulamia.db")),
+                execution_options={"schema_translate_map": {PRIVATE_SCHEMA: None}},
+            )
 
-            Base.metadata.create_all(bind=pg_engine)
-            engine = pg_engine
-            SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
-            _db_status = {
-                "mode": "postgres",
-                "postgres_connected": True,
-                "error": None
-            }
-            print("Successfully connected to Supabase PostgreSQL!")
-            return
-        except Exception as e:
-            err_msg = str(e)
-            print(f"PostgreSQL connection failed ({err_msg}). Falling back to resilient SQLite...")
-            _db_status = {
-                "mode": "sqlite_fallback",
-                "postgres_connected": False,
-                "error": err_msg
-            }
-
-    # Fallback: SQLite in writable DATA_DIR (works on local and Vercel /tmp)
-    try:
-        sqlite_file = DATA_DIR / "aulamia.db"
-        sqlite_url = f"sqlite:///{sqlite_file}"
-        sqlite_engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
-        Base.metadata.create_all(bind=sqlite_engine)
-        engine = sqlite_engine
-        SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
-        if _db_status["mode"] != "sqlite_fallback":
-            _db_status = {
-                "mode": "sqlite",
-                "postgres_connected": False,
-                "error": "No DATABASE_URL configured"
-            }
-        print(f"Resilient database active: {sqlite_url}")
-    except Exception as e:
-        print(f"Fatal error initializing fallback database: {e}")
-        engine = None
-        SessionLocal = None
-
-init_database()
-
-def get_db_status() -> Dict[str, Any]:
-    return _db_status
-
-def get_db():
-    if SessionLocal:
-        db = SessionLocal()
         try:
-            yield db
-        finally:
-            db.close()
-    else:
-        yield None
+            with candidate.begin() as connection:
+                if DATABASE_URL:
+                    connection.execute(CreateSchema(PRIVATE_SCHEMA, if_not_exists=True))
+                Base.metadata.create_all(bind=connection)
+        except Exception:
+            candidate.dispose()
+            raise
+        engine = candidate
+        SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+        return SessionLocal
+
+
+@contextmanager
+def storage_session():
+    try:
+        factory = get_session_factory()
+    except (SQLAlchemyError, OSError, ValueError, ImportError) as error:
+        logger.warning("Database initialization failed (%s)", type(error).__name__)
+        raise StorageUnavailable("La base de datos no está disponible. Intenta de nuevo en unos minutos.") from None
+    try:
+        with factory.begin() as session:
+            yield session
+    except SQLAlchemyError as error:
+        logger.warning("Database operation failed (%s)", type(error).__name__)
+        raise StorageUnavailable("La base de datos no está disponible. Intenta de nuevo en unos minutos.") from None
+
+
+def insert_if_absent(session, table, values):
+    insert = pg_insert if session.bind.dialect.name == "postgresql" else sqlite_insert
+    result = session.execute(insert(table).values(**values).on_conflict_do_nothing())
+    return result.rowcount == 1
+
+
+def get_db_status():
+    try:
+        with storage_session() as session:
+            session.execute(select(1))
+    except StorageUnavailable:
+        return {"mode": "unavailable", "postgres_connected": False}
+    return {"mode": "postgres" if DATABASE_URL else "sqlite", "postgres_connected": bool(DATABASE_URL)}
