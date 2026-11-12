@@ -131,6 +131,14 @@ SessionLocal = None
 _init_lock = Lock()
 
 
+def create_postgres_engine():
+    return create_engine(
+        DATABASE_URL, pool_pre_ping=True, pool_recycle=300,
+        pool_size=2, max_overflow=2, pool_timeout=5, hide_parameters=True,
+        connect_args={"connect_timeout": 3},
+    )
+
+
 def get_session_factory():
     global engine, SessionLocal
 
@@ -141,11 +149,7 @@ def get_session_factory():
             raise StorageUnavailable("Configura la conexión a PostgreSQL del backend.")
 
         if DATABASE_URL:
-            candidate = create_engine(
-                DATABASE_URL, pool_pre_ping=True, pool_recycle=300,
-                pool_size=2, max_overflow=2, pool_timeout=5, hide_parameters=True,
-                connect_args={"connect_timeout": 3},
-            )
+            candidate = create_postgres_engine()
         else:
             DATA_DIR.mkdir(parents=True, exist_ok=True)
             candidate = create_engine(
@@ -188,9 +192,25 @@ def insert_if_absent(session, table, values):
 
 
 def get_db_status():
+    if DATABASE_URL:
+        # Preview and production may share the same database. A health check only pings it.
+        active_engine = engine
+        temporary_engine = None
+        try:
+            if active_engine is None:
+                temporary_engine = active_engine = create_postgres_engine()
+            with active_engine.connect() as connection:
+                connection.execute(select(1))
+        except (SQLAlchemyError, OSError, ValueError, ImportError):
+            return {"mode": "unavailable", "postgres_connected": False}
+        finally:
+            if temporary_engine is not None:
+                temporary_engine.dispose()
+        return {"mode": "postgres", "postgres_connected": True}
+
     try:
         with storage_session() as session:
             session.execute(select(1))
     except StorageUnavailable:
         return {"mode": "unavailable", "postgres_connected": False}
-    return {"mode": "postgres" if DATABASE_URL else "sqlite", "postgres_connected": bool(DATABASE_URL)}
+    return {"mode": "sqlite", "postgres_connected": False}
