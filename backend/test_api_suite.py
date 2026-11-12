@@ -81,6 +81,16 @@ class AulaMIAIntegrationTest(unittest.TestCase):
         self.assertEqual(response.status_code, expected, f"{method} {path}: {response.text[:400]}")
         return None if expected == 204 else response.json()
 
+    def test_vercel_frontend_can_send_login_requests(self):
+        origin = "https://aulamia-pi.vercel.app"
+        response = requests.options(self.api + "/auth/login", headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        }, timeout=8)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("Access-Control-Allow-Origin"), origin)
+
     def test_login_register_migrate_logout(self):
         legacy = {"email": "legacy@example.test", "password": "contraseña-prueba"}
         migrated = self.request("POST", "/auth/login", json=legacy)
