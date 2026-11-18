@@ -185,7 +185,7 @@ const curriculumByGroup: Record<string, GradeCurriculum> = {
 };
 
 export function getCurriculumForGrade(grade: string): GradeCurriculum {
-  const match = String(grade).match(/\\d+/);
+  const match = String(grade).match(/\d+/);
   const value = match ? Number(match[0]) : 1;
   const key = value <= 3 ? "1-3" : value <= 5 ? "4-5" : value <= 7 ? "6-7" : value <= 9 ? "8-9" : "10-11";
   return curriculumByGroup[key];
