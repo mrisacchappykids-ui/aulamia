@@ -35,6 +35,10 @@ export interface LessonPlan {
   universal_design_adaptations: string[];
   formative_evaluation_strategy: string;
   learning_evidences: string[];
+  curricular_grade?: string | null;
+  curriculum_group?: string | null;
+  curricular_component?: string | null;
+  curricular_evidence?: string | null;
   created_at: string;
 }
 
