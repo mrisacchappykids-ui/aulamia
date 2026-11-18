@@ -53,7 +53,6 @@ export default function PlaneacionesPage() {
         curriculum_group: gradeCurriculum.group,
         curricular_component: selectedComponent?.name,
         curricular_evidence: selectedEvidence,
-        curricular_evidence: selectedEvidence,
         custom_notes: `Grado curricular: ${curricularGrade}. Conjunto MEN: ${gradeCurriculum.group}. Componente oficial: ${selectedComponent?.name}. Evidencia de aprendizaje seleccionada del MEN: ${selectedEvidence}. La planeación debe limitarse al área de Tecnología e Informática y mantener coherencia con estos referentes.`,
       });
       setPlan(res);
