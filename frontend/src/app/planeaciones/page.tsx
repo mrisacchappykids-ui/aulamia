@@ -5,13 +5,16 @@ import { BookOpen, Sparkles, Printer, ShieldCheck, CheckCircle2, Clock, Users, A
 import { getClassrooms, generateLessonPlan } from "@/lib/api";
 import { ClassroomProfile, LessonPlan } from "@/types";
 import ClassroomContextBadge from "@/components/ClassroomContextBadge";
+import { CURRICULUM_GROUPS, getCurriculumForGrade } from "@/data/technologyCurriculum";
 
 export default function PlaneacionesPage() {
   const [classrooms, setClassrooms] = useState<ClassroomProfile[]>([]);
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>("");
-  const [topic, setTopic] = useState("Suma y resta de fracciones con igual y diferente denominador");
-  const [objective, setObjective] = useState("Resolver situaciones problemáticas cotidianas utilizando adición y sustracción de fracciones");
-  const [competencies, setCompetencies] = useState("Pensamiento numérico, razonamiento matemático, comunicación asertiva");
+  const [curricularGrade, setCurricularGrade] = useState("2");
+  const [componentId, setComponentId] = useState("nature");
+  const [selectedEvidence, setSelectedEvidence] = useState("");
+  const [topic, setTopic] = useState("");
+  const [objective, setObjective] = useState("");
   const [generating, setGenerating] = useState(false);
   const [plan, setPlan] = useState<LessonPlan | null>(null);
   const [loadingClassrooms, setLoadingClassrooms] = useState(true);
@@ -40,12 +43,15 @@ export default function PlaneacionesPage() {
     setGenerateError("");
     setGenerating(true);
     try {
-      const compList = competencies.split(",").map((s) => s.trim()).filter(Boolean);
+      const compList = selectedComponent ? [selectedComponent.competency] : [];
       const res = await generateLessonPlan({
         classroom_id: selectedClassroomId,
         topic: topic.trim(),
         learning_objective: objective.trim(),
         specific_competencies: compList,
+        curricular_component: selectedComponent?.name,
+        curricular_evidence: selectedEvidence,
+        custom_notes: `Grado curricular: ${curricularGrade}. Conjunto MEN: ${gradeCurriculum.group}. Componente oficial: ${selectedComponent?.name}. Evidencia de aprendizaje seleccionada del MEN: ${selectedEvidence}. La planeación debe limitarse al área de Tecnología e Informática y mantener coherencia con estos referentes.`,
       });
       setPlan(res);
     } catch (error) {
@@ -60,6 +66,14 @@ export default function PlaneacionesPage() {
   };
 
   const activeClassroom = classrooms.find((c) => c.id === selectedClassroomId);
+  const gradeCurriculum = getCurriculumForGrade(curricularGrade);
+  const selectedComponent = gradeCurriculum.components.find((item) => item.id === componentId) ?? gradeCurriculum.components[0];
+
+  useEffect(() => {
+    if (selectedComponent && !selectedComponent.evidences.includes(selectedEvidence)) {
+      setSelectedEvidence(selectedComponent.evidences[0] ?? "");
+    }
+  }, [componentId, curricularGrade]);
 
   return (
     <div className="space-y-8">
@@ -99,38 +113,47 @@ export default function PlaneacionesPage() {
 
         <form onSubmit={handleGenerate} className="space-y-4 text-xs">
           {generateError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-rose-800">{generateError}</p>}
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Tema de la Clase</label>
-            <input
-              type="text"
-              required
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="ej. Los ecosistemas y las cadenas tróficas locales"
-              className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
-            />
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 space-y-3">
+            <div>
+              <p className="text-sm font-bold text-slate-800">Referentes curriculares · Tecnología e Informática</p>
+              <p className="text-[11px] text-slate-600">Basados en las Orientaciones Curriculares del MEN (2022). Los referentes se presentan por conjuntos de grados.</p>
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Grado</label>
+              <select value={curricularGrade} onChange={(e) => { setCurricularGrade(e.target.value); setComponentId("nature"); }} className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white">
+                {CURRICULUM_GROUPS.map((grade) => <option key={grade.value} value={grade.value}>{grade.label}</option>)}
+              </select>
+              <p className="mt-1 text-[11px] text-slate-500">Conjunto curricular: {gradeCurriculum.group}</p>
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Componente</label>
+              <select value={componentId} onChange={(e) => setComponentId(e.target.value)} className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white">
+                {gradeCurriculum.components.map((component) => <option key={component.id} value={component.id}>{component.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Competencia oficial del conjunto</label>
+              <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-relaxed text-slate-700">{selectedComponent.competency}</div>
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Evidencia de aprendizaje</label>
+              <select value={selectedEvidence} onChange={(e) => setSelectedEvidence(e.target.value)} className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-xs">
+                {selectedComponent.evidences.map((evidence, index) => <option key={index} value={evidence}>{evidence}</option>)}
+              </select>
+              <button type="button" onClick={() => setObjective(selectedEvidence)} className="mt-2 text-[11px] font-semibold text-blue-700 hover:underline">Usar esta evidencia como base del objetivo de la clase</button>
+            </div>
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Objetivo de Aprendizaje</label>
-            <input
-              type="text"
-              required
-              value={objective}
-              onChange={(e) => setObjective(e.target.value)}
-              placeholder="ej. Identificar las interacciones entre productores y consumidores mediante modelos gráficos"
-              className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
-            />
+            <label className="block font-semibold text-slate-700 mb-1">Tema de la clase</label>
+            <input type="text" required value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Escribe el tema específico que desarrollarás" className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+            <p className="mt-1 text-[11px] text-slate-500">Este campo se conserva libre para que el docente escriba el tema de su clase.</p>
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Competencias o Habilidades Clave (separadas por coma)</label>
-            <input
-              type="text"
-              value={competencies}
-              onChange={(e) => setCompetencies(e.target.value)}
-              className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
-            />
+            <label className="block font-semibold text-slate-700 mb-1">Objetivo de aprendizaje de la clase</label>
+            <textarea required rows={3} value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Formula el aprendizaje que esperas alcanzar, en coherencia con la competencia y la evidencia seleccionadas." className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+            <p className="mt-1 text-[11px] text-slate-500">El objetivo de clase se formula a partir del referente curricular; no se presenta como una cita textual del MEN.</p>
           </div>
 
           <div className="flex justify-end pt-2">
