@@ -47,6 +47,10 @@ class LessonPlanRequest(BaseModel):
     topic: str = Field(..., example="Suma y resta de fracciones con igual y diferente denominador")
     learning_objective: str = Field(..., example="Resolver situaciones problemáticas cotidianas utilizando adición y sustracción de fracciones")
     specific_competencies: Optional[List[str]] = Field(default_factory=list)
+    curricular_grade: Optional[str] = None
+    curriculum_group: Optional[str] = None
+    curricular_component: Optional[str] = None
+    curricular_evidence: Optional[str] = None
     custom_notes: Optional[str] = None
 
 class LessonPlan(BaseModel):
@@ -62,6 +66,10 @@ class LessonPlan(BaseModel):
     universal_design_adaptations: List[str]
     formative_evaluation_strategy: str
     learning_evidences: List[str]
+    curricular_grade: Optional[str] = None
+    curriculum_group: Optional[str] = None
+    curricular_component: Optional[str] = None
+    curricular_evidence: Optional[str] = None
     created_at: str
 
 # ----------------- Activity Schemas -----------------

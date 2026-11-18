@@ -135,6 +135,10 @@ export async function generateLessonPlan(data: {
   topic: string;
   learning_objective: string;
   specific_competencies?: string[];
+  curricular_grade?: string;
+  curriculum_group?: string;
+  curricular_component?: string;
+  curricular_evidence?: string;
   custom_notes?: string;
 }): Promise<LessonPlan> {
   return fetchJson<LessonPlan>("/planner/generate", {

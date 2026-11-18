@@ -19,6 +19,16 @@ def generate_lesson_plan(request: LessonPlanRequest):
         competencies=request.specific_competencies,
         custom_notes=request.custom_notes
     )
+    # Persist the official curricular reference selected in the form.
+    plan.subject = "Tecnología e Informática"
+    if request.curricular_grade:
+        plan.grade = f"{request.curricular_grade}°"
+    plan.curricular_grade = request.curricular_grade
+    plan.curriculum_group = request.curriculum_group
+    plan.curricular_component = request.curricular_component
+    plan.curricular_evidence = request.curricular_evidence
+    if request.curricular_evidence:
+        plan.learning_evidences = [request.curricular_evidence]
 
     # Persist in resources history
     ClassroomStorage.save_resource("lesson_plan", plan.model_dump())
