@@ -1,36 +1,81 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EducationalGame } from "@/types";
-import { Award, CheckCircle2, XCircle, Lightbulb, RotateCcw, Sparkles, Trophy } from "lucide-react";
+import {
+  Award,
+  CheckCircle2,
+  Clock3,
+  Lightbulb,
+  RotateCcw,
+  Sparkles,
+  Trophy,
+  XCircle,
+} from "lucide-react";
 
 interface Props {
   game: EducationalGame;
 }
 
+type GameMode = "trivia" | "challenge" | "bingo";
+
+const ROUND_SECONDS = 45;
+
 export default function MiniGamePlayer({ game }: Props) {
+  const mode: GameMode =
+    game.game_style === "desafio_relampago"
+      ? "challenge"
+      : game.game_style === "bingo_reto" || game.game_style === "asociacion"
+        ? "bingo"
+        : "trivia";
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [score, setScore] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [gameFinished, setGameFinished] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(ROUND_SECONDS);
 
   const currentItem = game.items[currentIndex];
   const isCorrect = selectedOption === currentItem?.correct_index;
+  const progress = game.items.length
+    ? Math.round(((currentIndex + (gameFinished ? 1 : 0)) / game.items.length) * 100)
+    : 0;
 
-  const handleSelect = (idx: number) => {
-    if (showFeedback) return;
-    setSelectedOption(idx);
+  useEffect(() => {
+    if (mode !== "challenge" || gameFinished) return;
+    const timer = window.setInterval(() => {
+      setSecondsLeft((remaining) => {
+        if (remaining <= 1) {
+          window.clearInterval(timer);
+          setGameFinished(true);
+          return 0;
+        }
+        return remaining - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [mode, gameFinished]);
+
+  const answerLabel = useMemo(() => {
+    if (mode === "bingo") return "Elige la casilla que resuelve la pista";
+    if (mode === "challenge") return "Responde antes de que termine el tiempo";
+    return "Selecciona la respuesta correcta";
+  }, [mode]);
+
+  const handleSelect = (index: number) => {
+    if (showFeedback || !currentItem) return;
+    setSelectedOption(index);
     setShowFeedback(true);
-    if (idx === currentItem.correct_index) {
-      setScore((prev) => prev + currentItem.points);
+    if (index === currentItem.correct_index) {
+      setScore((previous) => previous + currentItem.points);
     }
   };
 
   const handleNext = () => {
     if (currentIndex + 1 < game.items.length) {
-      setCurrentIndex((prev) => prev + 1);
+      setCurrentIndex((previous) => previous + 1);
       setSelectedOption(null);
       setShowFeedback(false);
       setShowHint(false);
@@ -46,172 +91,198 @@ export default function MiniGamePlayer({ game }: Props) {
     setShowHint(false);
     setScore(0);
     setGameFinished(false);
+    setSecondsLeft(ROUND_SECONDS);
   };
 
-  if (gameFinished) {
+  if (!game.items.length) {
     return (
-      <div className="bg-gradient-to-br from-indigo-900 to-brand-950 text-white rounded-3xl p-8 text-center shadow-xl max-w-xl mx-auto border border-indigo-700/40">
-        <div className="w-20 h-20 bg-amber-400 text-amber-950 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-400/20 animate-bounce">
-          <Trophy className="w-10 h-10" />
-        </div>
-        <span className="px-3 py-1 bg-brand-800/80 rounded-full text-xs font-semibold text-brand-200 uppercase tracking-widest border border-brand-700">
-          ¡Misión Cumplida!
-        </span>
-        <h3 className="text-2xl font-bold mt-2">¡Felicitaciones al Equipo!</h3>
-        <p className="text-indigo-200 text-sm mt-1 max-w-sm mx-auto">
-          Han completado todos los desafíos pedagógicos de {game.topic}.
-        </p>
-
-        <div className="bg-white/10 rounded-2xl p-4 my-6 border border-white/10">
-          <div className="flex justify-around items-center">
-            <div>
-              <p className="text-xs text-indigo-300">Puntaje Total</p>
-              <p className="text-3xl font-extrabold text-amber-300">{score} pts</p>
-            </div>
-            <div className="h-10 w-px bg-white/20" />
-            <div>
-              <p className="text-xs text-indigo-300">Insignia Desbloqueada</p>
-              <p className="text-sm font-bold text-white flex items-center gap-1 justify-center mt-1">
-                <Award className="w-4 h-4 text-amber-400" />
-                {game.reward_badge_name}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={handleRestart}
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-brand-900 font-bold text-sm rounded-xl hover:bg-indigo-50 shadow-md transition"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Jugar de nuevo
-        </button>
+      <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-900">
+        No se encontraron retos para este juego. Intenta generarlo nuevamente.
       </div>
     );
   }
 
+  if (gameFinished) {
+    const maxScore = game.items.reduce((total, item) => total + item.points, 0);
+    const percentage = maxScore ? Math.round((score / maxScore) * 100) : 0;
+    return (
+      <section className="mx-auto max-w-2xl overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 p-8 text-center text-white shadow-xl">
+        <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-amber-300 text-amber-950 shadow-lg">
+          <Trophy className="h-10 w-10" />
+        </div>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-200">Misión completada</p>
+        <h2 className="mt-2 text-3xl font-black">{game.game_title}</h2>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-indigo-100">
+          {percentage >= 80
+            ? "¡Excelente trabajo! Tus respuestas muestran lo que has aprendido."
+            : percentage >= 50
+              ? "¡Buen esfuerzo! Sigue practicando y cada vez lo harás mejor."
+              : "Cada intento es una oportunidad para aprender. Puedes jugar otra vez."}
+        </p>
+        <div className="mx-auto mt-7 grid max-w-sm grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-white/10 p-4">
+            <p className="text-xs text-indigo-200">Puntos obtenidos</p>
+            <p className="mt-1 text-3xl font-black">{score}</p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-4">
+            <p className="text-xs text-indigo-200">Avance</p>
+            <p className="mt-1 text-3xl font-black">{percentage}%</p>
+          </div>
+        </div>
+        <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-amber-200/30 bg-amber-300/10 px-4 py-2 text-sm font-semibold text-amber-200">
+          <Award className="h-4 w-4" />
+          Insignia: {game.reward_badge_name}
+        </div>
+        <div className="mt-8">
+          <button
+            type="button"
+            onClick={handleRestart}
+            className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-indigo-950 transition hover:bg-indigo-50"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Volver a jugar
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (!currentItem) return null;
+
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 p-6 md:p-8 shadow-sm max-w-2xl mx-auto">
-      {/* Game Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
-        <div>
-          <span className="text-[11px] font-bold text-brand-600 uppercase tracking-wider bg-brand-50 px-2.5 py-0.5 rounded-full">
-            {game.game_style.replace("_", " ")}
+    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg">
+      <div className="bg-gradient-to-r from-indigo-950 to-violet-900 p-5 text-white md:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-200">
+              {mode === "challenge"
+                ? "Desafío relámpago"
+                : mode === "bingo"
+                  ? "Bingo de pistas"
+                  : "Trivia por misiones"}
+            </p>
+            <h2 className="mt-1 text-2xl font-black">{game.game_title}</h2>
+            <p className="mt-1 text-sm text-indigo-100">{game.topic}</p>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold">
+            {mode === "challenge" ? (
+              <>
+                <Clock3 className="h-4 w-4" />
+                {secondsLeft}s
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 text-amber-300" />
+                {score} puntos
+              </>
+            )}
+          </div>
+        </div>
+        <div className="mt-5 flex items-center justify-between text-xs font-semibold text-indigo-100">
+          <span>Reto {currentIndex + 1} de {game.items.length}</span>
+          <span>{progress}%</span>
+        </div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15">
+          <div className="h-full rounded-full bg-amber-300 transition-all" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
+
+      <div className="p-5 md:p-8">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-800">
+            {answerLabel}
           </span>
-          <h3 className="text-lg font-bold text-slate-900 mt-1">{game.game_title}</h3>
+          <span className="text-xs font-semibold text-slate-500">+{currentItem.points} puntos</span>
         </div>
-        <div className="text-right">
-          <span className="text-xs text-slate-500 font-medium">Puntos</span>
-          <p className="text-xl font-black text-brand-600">{score}</p>
-        </div>
-      </div>
 
-      {/* Progress Bar */}
-      <div className="w-full bg-slate-100 h-2 rounded-full mb-6 overflow-hidden">
-        <div
-          className="bg-brand-600 h-full transition-all duration-300 rounded-full"
-          style={{ width: `${((currentIndex + 1) / game.items.length) * 100}%` }}
-        />
-      </div>
-
-      <div className="text-xs font-semibold text-slate-400 mb-2">
-        Desafío {currentIndex + 1} de {game.items.length}
-      </div>
-
-      {/* Question Prompt */}
-      <h4 className="text-base md:text-lg font-bold text-slate-800 mb-5 leading-snug">
-        {currentItem?.prompt}
-      </h4>
-
-      {/* Options */}
-      <div className="space-y-3 mb-6">
-        {currentItem?.options.map((opt, idx) => {
-          let buttonStyle = "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300";
-
-          if (showFeedback) {
-            if (idx === currentItem.correct_index) {
-              buttonStyle = "bg-emerald-50 border-emerald-500 text-emerald-900 font-semibold ring-1 ring-emerald-500";
-            } else if (idx === selectedOption) {
-              buttonStyle = "bg-rose-50 border-rose-400 text-rose-800";
-            } else {
-              buttonStyle = "bg-slate-50 border-slate-200 text-slate-400 opacity-60";
-            }
-          }
-
-          return (
+        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-5 md:p-6">
+          <p className="text-lg font-bold leading-7 text-slate-900">{currentItem.prompt}</p>
+          {currentItem.visual_clue && (
             <button
-              key={idx}
-              onClick={() => handleSelect(idx)}
-              disabled={showFeedback}
-              className={`w-full text-left p-4 rounded-2xl border text-sm transition-all flex items-center justify-between ${buttonStyle}`}
+              type="button"
+              onClick={() => setShowHint((visible) => !visible)}
+              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 hover:text-indigo-900"
+              aria-expanded={showHint}
             >
-              <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-white border border-slate-300 text-xs font-bold flex items-center justify-center text-slate-600 shrink-0">
-                  {String.fromCharCode(65 + idx)}
-                </span>
-                <span>{opt}</span>
-              </div>
-              {showFeedback && idx === currentItem.correct_index && (
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 ml-2" />
-              )}
-              {showFeedback && idx === selectedOption && idx !== currentItem.correct_index && (
-                <XCircle className="w-5 h-5 text-rose-500 shrink-0 ml-2" />
-              )}
+              <Lightbulb className="h-4 w-4" />
+              {showHint ? "Ocultar pista" : "Necesito una pista"}
             </button>
-          );
-        })}
-      </div>
-
-      {/* Scaffold Hint for Inclusion */}
-      {currentItem?.visual_clue && (
-        <div className="mb-4">
-          {!showHint ? (
-            <button
-              onClick={() => setShowHint(true)}
-              className="text-xs text-amber-700 hover:text-amber-800 font-semibold flex items-center gap-1.5 transition"
-            >
-              <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
-              Ver pista visual de apoyo (DUA)
-            </button>
-          ) : (
-            <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2 animate-fadeIn">
-              <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>{currentItem.visual_clue}</div>
-            </div>
+          )}
+          {showHint && currentItem.visual_clue && (
+            <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+              {currentItem.visual_clue}
+            </p>
           )}
         </div>
-      )}
 
-      {/* Feedback Banner */}
-      {showFeedback && (
-        <div
-          className={`p-4 rounded-2xl border mb-6 animate-fadeIn ${
-            isCorrect
-              ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-              : "bg-slate-50 border-slate-200 text-slate-800"
-          }`}
-        >
-          <p className="text-xs font-bold mb-1 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-brand-600" />
-            {isCorrect ? "¡Excelente razonamiento!" : "Reflexión Pedagógica:"}
-          </p>
-          <p className="text-xs leading-relaxed">{currentItem.fun_fact_or_feedback}</p>
+        <div className={mode === "bingo" ? "mt-6 grid grid-cols-2 gap-3" : "mt-6 grid gap-3 sm:grid-cols-2"}>
+          {currentItem.options.map((option, index) => {
+            const chosen = selectedOption === index;
+            const correct = index === currentItem.correct_index;
+            let style = "border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50";
+            if (showFeedback && correct) style = "border-emerald-400 bg-emerald-50 text-emerald-900";
+            else if (showFeedback && chosen) style = "border-rose-300 bg-rose-50 text-rose-900";
+            return (
+              <button
+                key={`${currentItem.id}-${index}`}
+                type="button"
+                onClick={() => handleSelect(index)}
+                disabled={showFeedback}
+                className={`relative min-h-20 rounded-2xl border-2 p-4 text-left text-sm font-semibold leading-6 transition disabled:cursor-default ${style} ${mode === "bingo" ? "text-center shadow-sm" : ""}`}
+              >
+                {mode === "bingo" && (
+                  <span className="mb-2 block text-2xl" aria-hidden="true">{["🧩", "⭐", "🎯", "🔎"][index]}</span>
+                )}
+                <span className="flex items-start gap-2">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-600">
+                    {String.fromCharCode(65 + index)}
+                  </span>
+                  <span>{option}</span>
+                  {showFeedback && correct && <CheckCircle2 className="ml-auto h-5 w-5 shrink-0 text-emerald-600" />}
+                  {showFeedback && chosen && !correct && <XCircle className="ml-auto h-5 w-5 shrink-0 text-rose-600" />}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      )}
 
-      {/* Actions */}
-      <div className="flex justify-end pt-2 border-t border-slate-100">
-        {showFeedback ? (
-          <button
-            onClick={handleNext}
-            className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-sm transition"
-          >
-            {currentIndex + 1 < game.items.length ? "Siguiente Desafío →" : "Ver Resultados Finales 🏆"}
-          </button>
-        ) : (
-          <p className="text-xs text-slate-400 italic">Selecciona una respuesta para continuar</p>
+        {showFeedback && (
+          <div className={`mt-5 rounded-2xl border p-4 ${isCorrect ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+            <p className={`flex items-center gap-2 font-bold ${isCorrect ? "text-emerald-800" : "text-amber-900"}`}>
+              {isCorrect ? <CheckCircle2 className="h-5 w-5" /> : <Lightbulb className="h-5 w-5" />}
+              {isCorrect ? "¡Respuesta correcta!" : "¡Buen intento! Sigamos aprendiendo."}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-700">{currentItem.fun_fact_or_feedback}</p>
+            <button
+              type="button"
+              onClick={handleNext}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-indigo-800"
+            >
+              {currentIndex + 1 < game.items.length ? "Siguiente reto" : "Ver resultado"}
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        )}
+
+        {!showFeedback && (
+          <p className="mt-5 text-center text-xs text-slate-500">
+            Puedes usar la pista cuando la necesites. Lo importante es aprender jugando.
+          </p>
         )}
       </div>
-    </div>
+
+      {game.inclusion_accommodations?.length > 0 && (
+        <div className="border-t border-slate-100 bg-slate-50 px-5 py-4 md:px-8">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Apoyos para participar</p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {game.inclusion_accommodations.map((accommodation, index) => (
+              <li key={index} className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 ring-1 ring-slate-200">
+                {accommodation}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }

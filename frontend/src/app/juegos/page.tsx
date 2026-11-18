@@ -87,9 +87,9 @@ export default function JuegosPage() {
               onChange={(e) => setGameStyle(e.target.value)}
               className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white"
             >
-              <option value="trivia_interactiva">Trivia Interactiva por Misiones (Ideal para pizarra o equipos)</option>
-              <option value="desafio_relampago">Desafío Relámpago en Parejas (Refuerzo ágil y reflexivo)</option>
-              <option value="bingo_reto">Reto de Asociación y Pistas (Enfoque manipulativo y visual)</option>
+              <option value="trivia_interactiva">Trivia por misiones (preguntas y retroalimentación)</option>
+              <option value="desafio_relampago">Desafío relámpago (45 segundos para resolver los retos)</option>
+              <option value="bingo_reto">Bingo de pistas (tablero de respuestas por casillas)</option>
             </select>
           </div>
 
