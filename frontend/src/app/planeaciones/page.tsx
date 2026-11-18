@@ -49,7 +49,10 @@ export default function PlaneacionesPage() {
         topic: topic.trim(),
         learning_objective: objective.trim(),
         specific_competencies: compList,
+        curricular_grade: curricularGrade,
+        curriculum_group: gradeCurriculum.group,
         curricular_component: selectedComponent?.name,
+        curricular_evidence: selectedEvidence,
         curricular_evidence: selectedEvidence,
         custom_notes: `Grado curricular: ${curricularGrade}. Conjunto MEN: ${gradeCurriculum.group}. Componente oficial: ${selectedComponent?.name}. Evidencia de aprendizaje seleccionada del MEN: ${selectedEvidence}. La planeación debe limitarse al área de Tecnología e Informática y mantener coherencia con estos referentes.`,
       });
@@ -182,7 +185,8 @@ export default function PlaneacionesPage() {
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-2">
                 <span><strong>Grado:</strong> {plan.grade}</span>
                 <span>•</span>
-                <span><strong>Área:</strong> {plan.subject}</span>
+                <span><strong>Área:</strong> Tecnología e Informática</span>
+                {plan.curriculum_group && <span><strong>Conjunto MEN:</strong> {plan.curriculum_group}</span>}
                 <span>•</span>
                 <span><strong>Fecha:</strong> {new Date(plan.created_at).toLocaleDateString()}</span>
               </div>
@@ -221,6 +225,8 @@ export default function PlaneacionesPage() {
               </ul>
             </div>
           </div>
+
+          {plan.curricular_component && <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 text-xs space-y-2"><p><strong>Componente curricular:</strong> {plan.curricular_component}</p><p><strong>Grado:</strong> {plan.curricular_grade} · {plan.curriculum_group}</p><p><strong>Evidencia MEN seleccionada:</strong> {plan.curricular_evidence}</p></div>}
 
           {/* Phases of Class */}
           <div>
