@@ -21,6 +21,8 @@ def generate_lesson_plan(request: LessonPlanRequest):
     )
     # Persist the official curricular reference selected in the form.
     plan.subject = "Tecnología e Informática"
+    if request.curricular_grade:
+        plan.grade = f"{request.curricular_grade}°"
     plan.curricular_grade = request.curricular_grade
     plan.curriculum_group = request.curriculum_group
     plan.curricular_component = request.curricular_component
